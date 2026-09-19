@@ -10,6 +10,11 @@ struct SearchScreen: View {
     private var currentTarget: SearchTarget? {
         store.configuration.enabledTargets.first { $0.id == intent.targetID } ?? store.configuration.defaultTarget
     }
+    private var visibleSourceRows: Int { verticalSizeClass == .compact ? 1 : 2 }
+    private var sourceViewportHeight: CGFloat {
+        CGFloat(visibleSourceRows * 48 + max(0, visibleSourceRows - 1))
+    }
+    private var sourceSectionHeight: CGFloat { 20 + 5 + sourceViewportHeight + 12 }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -27,9 +32,11 @@ struct SearchScreen: View {
             }.padding(.horizontal, 20).frame(height: 48)
             }
             if !store.configuration.settings.thumbLayout { composer }
-            GeometryReader { geometry in
+            GeometryReader { _ in
                 VStack(spacing: 8) {
-                    sourceSection.frame(height: max(0, min(228, geometry.size.height * 0.48)))
+                    // Keep the source card on complete 48-point rows so its lower edge
+                    // never looks like a clipped extra item.
+                    sourceSection.frame(height: sourceSectionHeight)
                     candidateSection.frame(maxHeight: .infinity)
                 }
             }
@@ -98,8 +105,11 @@ struct SearchScreen: View {
                                 .accessibilityIdentifier("source-\(target.id)")
                             if target.id != store.configuration.enabledTargets.last?.id { Divider().padding(.leading, 46) }
                         }
-                    }.padding(.horizontal, 12).padding(.vertical, 2)
-                }.scrollDismissesKeyboard(.never)
+                    }.padding(.horizontal, 12)
+                }
+                    .frame(height: sourceViewportHeight)
+                    .scrollDismissesKeyboard(.never)
+                    .padding(.vertical, 6)
                     .background(ResearchStyle.surface, in: RoundedRectangle(cornerRadius: 18))
             }
         }
@@ -181,10 +191,20 @@ struct CandidateRow: View {
                 Button(action: fill) { Image(systemName: "arrow.up.left").font(.caption).foregroundStyle(.tertiary).frame(width: 44, height: 44) }
                     .accessibilityLabel("将\(query)填入搜索框")
             }
-            ForEach(targets) { target in
-                Button { search(target) } label: { TargetIcon(target: target, size: 29).frame(width: 44, height: 44).contentShape(Rectangle()) }
-                    .buttonStyle(.plain).accessibilityLabel("用\(target.name)搜索\(query)")
-                    .accessibilityIdentifier(original ? "original-\(target.id)" : "candidate-\(target.id)-\(query)")
+            if !targets.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 0) {
+                        ForEach(targets) { target in
+                            Button { search(target) } label: {
+                                TargetIcon(target: target, size: 29)
+                                    .frame(width: 44, height: 44).contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain).accessibilityLabel("用\(target.name)搜索\(query)")
+                            .accessibilityIdentifier(original ? "original-\(target.id)" : "candidate-\(target.id)-\(query)")
+                        }
+                    }
+                }
+                .frame(width: min(CGFloat(targets.count) * 44, 132), height: 44)
             }
         }
         .padding(.leading, 12).padding(.trailing, 4)
