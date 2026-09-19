@@ -88,7 +88,7 @@ jobs:
           xcodebuild build -project MyResearch.xcodeproj -scheme MyResearch \
             -configuration Debug -sdk iphonesimulator \
             -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
-            -derivedDataPath build/Simulator CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES \
+            -derivedDataPath build/Simulator ARCHS="$(uname -m)" ONLY_ACTIVE_ARCH=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES \
             2>&1 | tee build/simulator-build.log
           xcrun simctl install "$SIMULATOR_ID" build/Simulator/Build/Products/Debug-iphonesimulator/MyResearch.app
           xcrun simctl launch --terminate-running-process "$SIMULATOR_ID" com.dandibbert.MyResearch \
@@ -114,14 +114,14 @@ jobs:
           set -o pipefail
           xcodebuild build-for-testing -project MyResearch.xcodeproj -scheme MyResearch \
             -configuration Debug -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
-            -derivedDataPath build/Simulator CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES \
+            -derivedDataPath build/Simulator ARCHS="$(uname -m)" ONLY_ACTIVE_ARCH=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES \
             2>&1 | tee build/share-test-build.log
           xcrun simctl install "$SIMULATOR_ID" build/Simulator/Build/Products/Debug-iphonesimulator/MyResearchShareProbe.app
           xcodebuild test-without-building -project MyResearch.xcodeproj -scheme MyResearch \
             -configuration Debug -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
             -derivedDataPath build/Simulator -resultBundlePath build/UI.xcresult \
             -parallel-testing-enabled NO -test-timeouts-enabled YES \
-            -maximum-test-execution-time-allowance 60 CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES \
+            -maximum-test-execution-time-allowance 60 ARCHS="$(uname -m)" ONLY_ACTIVE_ARCH=YES CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES \
             2>&1 | tee build/ui-tests.log
       - name: Export screenshots
         if: always()
