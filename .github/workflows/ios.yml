@@ -65,6 +65,7 @@ jobs:
       - name: Boot iPhone simulator
         run: |
           mkdir -p build
+          defaults write com.apple.iphonesimulator ConnectHardwareKeyboard -bool false
           xcrun simctl list devices available --json > build/devices.json
           DEVICE=$(python3 - <<'PY'
           import json
@@ -80,19 +81,49 @@ jobs:
           xcrun simctl bootstatus "$DEVICE" -b
           xcrun simctl ui "$DEVICE" appearance light
           xcrun simctl status_bar "$DEVICE" override --time '9:41' --batteryState charged --batteryLevel 100
+      - name: Build and launch simulator app independently
+        timeout-minutes: 6
+        run: |
+          set -o pipefail
+          xcodebuild build -project MyResearch.xcodeproj -scheme MyResearch \
+            -configuration Debug -sdk iphonesimulator \
+            -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+            -derivedDataPath build/Simulator CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES \
+            2>&1 | tee build/simulator-build.log
+          xcrun simctl install "$SIMULATOR_ID" build/Simulator/Build/Products/Debug-iphonesimulator/MyResearch.app
+          xcrun simctl launch --terminate-running-process "$SIMULATOR_ID" com.dandibbert.MyResearch \
+            --ui-testing '--query=春莱布' -AppleLanguages '(zh-Hans)' -AppleLocale zh_CN
+          mkdir -p build/launch-preview
+          sleep 5
+          xcrun simctl io "$SIMULATOR_ID" screenshot build/launch-preview/search-light.png
+          xcrun simctl ui "$SIMULATOR_ID" appearance dark
+          sleep 2
+          xcrun simctl io "$SIMULATOR_ID" screenshot build/launch-preview/search-dark.png
+          xcrun simctl ui "$SIMULATOR_ID" appearance light
+          xcrun simctl terminate "$SIMULATOR_ID" com.dandibbert.MyResearch
+      - name: Upload independent launch screenshots
+        uses: actions/upload-artifact@v4
+        with:
+          name: simulator-launch-preview
+          path: build/launch-preview/
+          if-no-files-found: error
+          retention-days: 14
       - name: Run native UI tests
+        timeout-minutes: 8
         run: |
           set -o pipefail
           xcodebuild test -project MyResearch.xcodeproj -scheme MyResearch \
             -configuration Debug -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
             -derivedDataPath build/Simulator -resultBundlePath build/UI.xcresult \
-            -parallel-testing-enabled NO CODE_SIGNING_ALLOWED=NO \
+            -parallel-testing-enabled NO -test-timeouts-enabled YES \
+            -maximum-test-execution-time-allowance 60 CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES \
             2>&1 | tee build/ui-tests.log
       - name: Export screenshots
         if: always()
         run: |
           if [ -d build/UI.xcresult ]; then
             xcrun xcresulttool export attachments --path build/UI.xcresult --output-path build/screenshots || true
+            xcrun xcresulttool get test-results summary --path build/UI.xcresult > build/ui-summary.json || true
           fi
       - name: Upload simulator evidence
         if: always()
@@ -101,6 +132,9 @@ jobs:
           name: simulator-tests-and-screenshots
           path: |
             build/ui-tests.log
+            build/simulator-build.log
+            build/ui-summary.json
+            build/launch-preview
             build/UI.xcresult
             build/screenshots
           if-no-files-found: warn
