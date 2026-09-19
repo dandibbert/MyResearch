@@ -1,0 +1,15 @@
+.DS_Store
+.build/
+build/
+dist/
+.swiftpm/
+MyResearch.xcodeproj/
+Resources/App-Info.plist
+Resources/Share-Info.plist
+Resources/PrivacyInfo.xcprivacy
+Resources/Assets.xcassets/
+*.ipa
+*.p12
+*.mobileprovision
+*.xcuserstate
+__pycache__/
