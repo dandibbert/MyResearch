@@ -14,7 +14,7 @@ final class ShareURLOpener {
                 try? await Task.sleep(nanoseconds: 3_000_000_000)
                 reply.finish(false)
             }
-            func bridge() {
+            @MainActor func bridge() {
                 guard !reply.finished, compatibility else { reply.finish(false); return }
                 var current: UIResponder? = owner
                 var visited = Set<ObjectIdentifier>()
