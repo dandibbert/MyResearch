@@ -205,6 +205,7 @@ struct CandidateRow: View {
                     }
                 }
                 .frame(width: min(CGFloat(targets.count) * 44, 132), height: 44)
+                .accessibilityIdentifier(original ? "original-sources" : "candidate-sources-\(query)")
             }
         }
         .padding(.leading, 12).padding(.trailing, 4)
