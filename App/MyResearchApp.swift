@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import SafariServices
 
 @main
 struct MyResearchApp: App {
@@ -44,6 +45,14 @@ struct RootView: View {
         }
         .background(ResearchStyle.background)
         .sheet(isPresented: $testSharing) { SystemShareSheet(text: store.query, includeURL: true) }
+        .fullScreenCover(isPresented: Binding(
+            get: { store.safariURL != nil },
+            set: { if !$0 { store.safariURL = nil } }
+        )) {
+            if let url = store.safariURL {
+                InAppSafariView(url: url).ignoresSafeArea()
+            }
+        }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { note in
             if let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
                 keyboardVisible = frame.minY < UIScreen.main.bounds.height - 20
@@ -62,4 +71,15 @@ struct RootView: View {
                 .contentShape(Rectangle())
         }.buttonStyle(.plain).accessibilityIdentifier("tab-\(index)")
     }
+}
+
+
+struct InAppSafariView: UIViewControllerRepresentable {
+    let url: URL
+    func makeUIViewController(context: Context) -> SFSafariViewController {
+        let configuration = SFSafariViewController.Configuration()
+        configuration.barCollapsingEnabled = true
+        return SFSafariViewController(url: url, configuration: configuration)
+    }
+    func updateUIViewController(_ uiViewController: SFSafariViewController, context: Context) {}
 }
