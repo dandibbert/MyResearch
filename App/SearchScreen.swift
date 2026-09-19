@@ -38,15 +38,14 @@ struct SearchScreen: View {
                 CandidateRow(query: intent.query, targets: store.configuration.quickTargets, original: true,
                              search: { source in store.search(intent.query, target: source ?? currentTarget) }, fill: nil)
                     .padding(.horizontal, 12).padding(.top, 6).padding(.bottom, 2)
-                    .accessibilityIdentifier("original-row")
             }
             if store.configuration.settings.thumbLayout { composer }
         }
         .onAppear { focusSoon(); refresh() }
         .onDisappear { suggestions.cancel() }
-        .onChange(of: store.query) { _ in refresh() }
-        .onChange(of: store.configuration) { _ in refresh() }
-        .onChange(of: scenePhase) { phase in if phase == .active { focusSoon() } }
+        .onChange(of: store.query) { refresh() }
+        .onChange(of: store.configuration) { refresh() }
+        .onChange(of: scenePhase) { _, phase in if phase == .active { focusSoon() } }
     }
 
     private var composer: some View {
@@ -56,7 +55,7 @@ struct SearchScreen: View {
             SearchField(text: $store.query, focused: $focused) { submit() }
                 .frame(height: 48)
             if verticalSizeClass == .compact {
-                Button { focused = false } label: { Image(systemName: "keyboard.chevron.compact.down").frame(width: 44, height: 44) }.accessibilityLabel("收起键盘")
+                Button { focused = false } label: { Image(systemName: "keyboard.chevron.compact.down").frame(width: 44, height: 44) }.accessibilityLabel("收起键盘").accessibilityIdentifier("toggle-keyboard")
             }
             if !store.query.isEmpty {
                 Button { store.query = ""; focused = true } label: {
@@ -183,7 +182,7 @@ struct CandidateRow: View {
                     .accessibilityLabel("将\(query)填入搜索框")
             }
             ForEach(targets) { target in
-                Button { search(target) } label: { TargetIcon(target: target, size: 29).frame(width: 44, height: 44) }
+                Button { search(target) } label: { TargetIcon(target: target, size: 29).frame(width: 44, height: 44).contentShape(Rectangle()) }
                     .buttonStyle(.plain).accessibilityLabel("用\(target.name)搜索\(query)")
                     .accessibilityIdentifier(original ? "original-\(target.id)" : "candidate-\(target.id)-\(query)")
             }

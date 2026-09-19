@@ -1,12 +1,23 @@
 import XCTest
 
 final class MyResearchUITests: XCTestCase {
-    override func setUpWithError() throws { continueAfterFailure = false }
+    override func setUpWithError() throws {
+        continueAfterFailure = false
+        XCUIDevice.shared.orientation = .portrait
+    }
+    override func tearDownWithError() throws {
+        XCUIDevice.shared.orientation = .portrait
+    }
     private func launch(_ query: String = "") -> XCUIApplication {
         let app = XCUIApplication()
         app.launchArguments = ["--ui-testing", "--query=\(query)", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
+        XCUIDevice.shared.orientation = .portrait
         XCTAssertTrue(app.textFields["search-input"].waitForExistence(timeout: 8))
+        // Fresh CI simulators may present the system QuickPath keyboard introduction.
+        let introduction = app.buttons["Continue"]
+        if introduction.waitForExistence(timeout: 1), introduction.isHittable { introduction.tap() }
+        else if app.buttons["继续"].exists, app.buttons["继续"].isHittable { app.buttons["继续"].tap() }
         return app
     }
     private func shot(_ title: String) {
@@ -16,11 +27,14 @@ final class MyResearchUITests: XCTestCase {
         add(attachment)
     }
     func testAutoKeyboardAndPinnedOriginal() {
-        let app = launch("春莱布")
+        let app = launch("春莱布2")
         XCTAssertTrue(app.keyboards.firstMatch.waitForExistence(timeout: 6))
         let original = app.buttons["original-query"]
         XCTAssertTrue(original.waitForExistence(timeout: 3))
         let before = original.frame.minY
+        // Trigger a genuinely new asynchronous request after measuring the row.
+        app.textFields["search-input"].typeText(XCUIKeyboardKey.delete.rawValue)
+        XCTAssertEqual(app.textFields["search-input"].value as? String, "春莱布")
         XCTAssertTrue(app.buttons["candidate-春莱布 年龄"].waitForExistence(timeout: 6))
         XCTAssertEqual(original.frame.minY, before, accuracy: 1.0)
         XCTAssertTrue(original.isHittable)
@@ -63,7 +77,6 @@ final class MyResearchUITests: XCTestCase {
     func testLandscapeKeepsInputReachable() {
         let app = launch("a long search query")
         XCUIDevice.shared.orientation = .landscapeLeft
-        defer { XCUIDevice.shared.orientation = .portrait }
         XCTAssertTrue(app.buttons["original-query"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["original-query"].isHittable)
         XCTAssertTrue(app.textFields["search-input"].isHittable)
