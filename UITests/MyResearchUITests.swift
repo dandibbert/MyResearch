@@ -74,12 +74,26 @@ final class MyResearchUITests: XCTestCase {
         app.buttons["tab-2"].tap()
         shot("03-settings")
     }
+    func testQuickSourceStripScrollsToLaterManualOrderItems() {
+        let app = launch("测试")
+        let strip = app.scrollViews["original-sources"]
+        XCTAssertTrue(strip.waitForExistence(timeout: 5))
+        let youtube = app.buttons["original-youtube"]
+        XCTAssertTrue(youtube.exists)
+        if !youtube.isHittable { strip.swipeLeft() }
+        XCTAssertTrue(youtube.isHittable)
+        youtube.tap()
+        let opened = app.staticTexts["last-opened-url"]
+        XCTAssertTrue(opened.waitForExistence(timeout: 4))
+        XCTAssertTrue(opened.label.contains("youtube.com/results"))
+        shot("04-scrollable-quick-sources")
+    }
     func testLandscapeKeepsInputReachable() {
         let app = launch("a long search query")
         XCUIDevice.shared.orientation = .landscapeLeft
         XCTAssertTrue(app.buttons["original-query"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["original-query"].isHittable)
         XCTAssertTrue(app.textFields["search-input"].isHittable)
-        shot("04-landscape-search")
+        shot("05-landscape-search")
     }
 }
