@@ -9,7 +9,11 @@ struct SearchTarget: Identifiable, Codable, Equatable, Sendable {
     var fallbackTemplate = ""
     var aliases: [String] = []
     var enabled = true
+    // Retained for backward-compatible configuration imports. Candidate shortcuts now
+    // follow the full enabled-source order and are horizontally scrollable.
     var quickAccess = false
+    var openInAppSafari: Bool? = nil
+    var usesInAppSafari: Bool { openInAppSafari ?? false }
     var isAction: Bool { !template.contains("{query}") }
 }
 
@@ -31,6 +35,9 @@ struct AppSettings: Codable, Equatable, Sendable {
     var historyEnabled = true
     var maxSuggestions = 6
     var defaultTargetID = "google"
+    // Optional so configurations saved by 1.1 continue to decode.
+    var inAppSafariEnabled: Bool? = true
+    var usesInAppSafari: Bool { inAppSafariEnabled ?? true }
 }
 
 struct HistoryItem: Identifiable, Codable, Equatable, Sendable {
@@ -49,7 +56,8 @@ struct Configuration: Codable, Equatable, Sendable {
         Configuration(targets: Presets.initial, settings: AppSettings())
     }
     var enabledTargets: [SearchTarget] { targets.filter(\.enabled) }
-    var quickTargets: [SearchTarget] { Array(enabledTargets.filter(\.quickAccess).prefix(3)) }
+    // Preserve the manual order from “我的链接” and expose every enabled source.
+    var quickTargets: [SearchTarget] { enabledTargets }
     var defaultTarget: SearchTarget? {
         enabledTargets.first { $0.id == settings.defaultTargetID } ?? enabledTargets.first
     }
