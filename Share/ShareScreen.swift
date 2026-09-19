@@ -190,10 +190,20 @@ private struct ShareCandidateRow: View {
                 }.frame(maxWidth: .infinity, minHeight: original ? 58 : 48, alignment: .leading).contentShape(Rectangle())
             }.buttonStyle(.plain).accessibilityIdentifier(original ? "share-original" : "share-candidate-\(query)")
             if let fill { Button(action: fill) { Image(systemName: "arrow.up.left").font(.caption).frame(width: 44, height: 44) }.accessibilityLabel("填入\(query)") }
-            ForEach(targets) { target in
-                Button { search(target) } label: { TargetIcon(target: target, size: 29).frame(width: 44, height: 44).contentShape(Rectangle()) }
-                    .buttonStyle(.plain).accessibilityLabel("用\(target.name)搜索\(query)")
-                    .accessibilityIdentifier("share-quick-\(target.id)")
+            if !targets.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 0) {
+                        ForEach(targets) { target in
+                            Button { search(target) } label: {
+                                TargetIcon(target: target, size: 29)
+                                    .frame(width: 44, height: 44).contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain).accessibilityLabel("用\(target.name)搜索\(query)")
+                            .accessibilityIdentifier("share-quick-\(target.id)")
+                        }
+                    }
+                }
+                .frame(width: min(CGFloat(targets.count) * 44, 132), height: 44)
             }
         }.padding(.leading, 12).padding(.trailing, 4)
             .background(original ? ResearchStyle.accent.opacity(0.09) : .clear, in: RoundedRectangle(cornerRadius: 16))
