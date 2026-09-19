@@ -23,13 +23,15 @@ final class ShareExtensionUITests: XCTestCase {
         else if app.buttons["继续"].exists, app.buttons["继续"].isHittable { app.buttons["继续"].tap() }
         app.buttons["toggle-keyboard"].tap()
         app.buttons["system-share-test"].tap()
-        let extensionButton = app.buttons["MyResearch"].firstMatch
-        if !extensionButton.waitForExistence(timeout: 4) {
-            let more = app.buttons["更多"].exists ? app.buttons["更多"] : app.buttons["More"]
+        // UIActivityViewController exposes its horizontal activities as cells,
+        // not buttons. Match the actual system accessibility tree.
+        let extensionCell = app.cells.matching(NSPredicate(format: "label == %@", "MyResearch")).firstMatch
+        if !extensionCell.waitForExistence(timeout: 4) {
+            let more = app.cells.matching(NSPredicate(format: "label IN %@", ["更多", "More"])).firstMatch
             if more.exists { more.tap() }
         }
-        XCTAssertTrue(extensionButton.waitForExistence(timeout: 5), app.debugDescription)
-        extensionButton.tap()
+        XCTAssertTrue(extensionCell.waitForExistence(timeout: 5), app.debugDescription)
+        extensionCell.tap()
         XCTAssertTrue(app.buttons["share-done"].waitForExistence(timeout: 8), app.debugDescription)
         XCTAssertTrue(app.buttons["share-target-share-probe"].waitForExistence(timeout: 6), "Shared configuration did not cross into the real extension: \(app.debugDescription)")
         return app
@@ -42,6 +44,10 @@ final class ShareExtensionUITests: XCTestCase {
         waitForExpectations(timeout: 6)
         XCTAssertTrue(app.buttons["share-original"].isHittable)
         XCTAssertTrue(app.staticTexts.matching(NSPredicate(format: "label CONTAINS %@", "已同步主 App")).firstMatch.exists)
+        let screenshot = XCTAttachment(screenshot: XCUIScreen.main.screenshot())
+        screenshot.name = "share-extension-ready"
+        screenshot.lifetime = .keepAlways
+        add(screenshot)
         app.buttons["share-done"].tap()
         XCTAssertTrue(app.buttons["system-share-test"].waitForExistence(timeout: 5))
     }
