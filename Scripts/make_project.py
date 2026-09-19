@@ -36,7 +36,7 @@ def write_plist(path, value):
 common_info = {
     'CFBundleDevelopmentRegion': 'zh_CN', 'CFBundleExecutable': '$(EXECUTABLE_NAME)',
     'CFBundleIdentifier': '$(PRODUCT_BUNDLE_IDENTIFIER)', 'CFBundleInfoDictionaryVersion': '6.0',
-    'CFBundleName': '$(PRODUCT_NAME)', 'CFBundleShortVersionString': '1.1.0',
+    'CFBundleName': '$(PRODUCT_NAME)', 'CFBundleShortVersionString': '1.2.0',
     'CFBundleVersion': '$(CURRENT_PROJECT_VERSION)', 'LSRequiresIPhoneOS': True,
 }
 write_plist('Resources/App-Info.plist', dict(common_info, **{
@@ -125,7 +125,7 @@ common_settings = {
     'SDKROOT': 'iphoneos', 'IPHONEOS_DEPLOYMENT_TARGET': '17.0', 'SWIFT_VERSION': '5.0',
     'CLANG_ENABLE_MODULES': 'YES', 'CLANG_ENABLE_OBJC_ARC': 'YES', 'SWIFT_STRICT_CONCURRENCY': 'minimal',
     'ENABLE_USER_SCRIPT_SANDBOXING': 'YES', 'TARGETED_DEVICE_FAMILY': '1,2', 'CODE_SIGN_STYLE': 'Automatic',
-    'MARKETING_VERSION': '1.1.0', 'CURRENT_PROJECT_VERSION': os.environ.get('GITHUB_RUN_NUMBER','1'),
+    'MARKETING_VERSION': '1.2.0', 'CURRENT_PROJECT_VERSION': os.environ.get('GITHUB_RUN_NUMBER','1'),
     'PRODUCT_NAME': '$(TARGET_NAME)', 'SWIFT_EMIT_LOC_STRINGS': 'NO',
 }
 
