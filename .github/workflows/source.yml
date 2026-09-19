@@ -1,0 +1,19 @@
+name: Source snapshot
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  source:
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    steps:
+      - uses: actions/checkout@v4
+      - run: git archive --format=zip --output=MyResearch-source.zip HEAD
+      - uses: actions/upload-artifact@v4
+        with:
+          name: MyResearch-source
+          path: MyResearch-source.zip
+          retention-days: 30
