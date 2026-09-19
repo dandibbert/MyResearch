@@ -11,7 +11,7 @@ struct LinksScreen: View {
                     ForEach(store.configuration.targets) { target in
                         HStack(spacing: 8) {
                             Button { editing = target } label: {
-                                SourceRow(target: target, detail: target.isAction ? "固定动作" : (target.quickAccess ? "候选快捷来源" : nil))
+                                SourceRow(target: target, detail: target.isAction ? "固定动作" : (target.usesInAppSafari ? "App 内 Safari" : nil))
                             }.buttonStyle(.plain).accessibilityIdentifier("edit-\(target.id)")
                             Toggle("启用\(target.name)", isOn: Binding(get: { target.enabled }, set: { store.setEnabled($0, id: target.id) }))
                                 .labelsHidden().scaleEffect(0.85).fixedSize()
@@ -144,8 +144,11 @@ struct TargetEditor: View {
                   footer: { Text("用逗号分隔多个触发词。支持「b 春莱布」或「春莱布 b」；按键盘搜索提交，不会在打字中途跳走。") }
                 Section("使用方式") {
                     Toggle("启用链接", isOn: $draft.enabled)
-                    Toggle("显示在候选右侧", isOn: $draft.quickAccess)
-                    Text("只展示排序最前的三个已启用快捷来源。其他来源仍可从首页列表使用。")
+                    Toggle("App 内 Safari 打开", isOn: Binding(
+                        get: { draft.usesInAppSafari },
+                        set: { draft.openInAppSafari = $0 }
+                    ))
+                    Text("候选右侧会按「我的链接」的手动顺序显示所有已启用来源，可横向滑动选择后面的来源。App 内 Safari 仅适用于 HTTP/HTTPS；自定义 App Scheme 仍交给系统打开，若失败且配置了 HTTPS 兜底，则兜底页也会遵循此项。")
                         .font(.caption).foregroundStyle(.secondary)
                 }
                 Section("实时测试") {
