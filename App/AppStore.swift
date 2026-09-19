@@ -9,6 +9,7 @@ final class AppStore: ObservableObject {
     @Published var selectedTab = 0
     @Published var errorMessage: String?
     @Published var lastOpenedURL = ""
+    @Published var safariURL: URL?
     @Published private(set) var isOpening = false
     @Published private(set) var sharingStatus = "尚未写入共享配置"
     let testMode = ProcessInfo.processInfo.arguments.contains("--ui-testing")
@@ -115,11 +116,21 @@ final class AppStore: ObservableObject {
         Task { @MainActor in
             defer { isOpening = false }
             if testMode { lastOpenedURL = url.absoluteString; return }
+            if shouldOpenInAppSafari(url, target: target) {
+                safariURL = url
+                if recordHistory { record(query: text, target: target) }
+                return
+            }
             var opened = await UIApplication.shared.open(url, options: [:])
             if !opened, !target.fallbackTemplate.isEmpty {
                 do {
                     let fallback = try TemplateEngine.url(template: target.fallbackTemplate, query: text)
-                    opened = await UIApplication.shared.open(fallback, options: [:])
+                    if shouldOpenInAppSafari(fallback, target: target) {
+                        safariURL = fallback
+                        opened = true
+                    } else {
+                        opened = await UIApplication.shared.open(fallback, options: [:])
+                    }
                 } catch { errorMessage = error.localizedDescription; return }
             }
             if opened {
@@ -128,6 +139,11 @@ final class AppStore: ObservableObject {
                 errorMessage = "无法打开「\(target.name)」。目标 App 可能未安装，或不支持此链接。可编辑链接并配置 HTTPS 兜底。\n\n\(url.absoluteString)"
             }
         }
+    }
+    private func shouldOpenInAppSafari(_ url: URL, target: SearchTarget) -> Bool {
+        guard configuration.settings.usesInAppSafari, target.usesInAppSafari else { return false }
+        let scheme = url.scheme?.lowercased() ?? ""
+        return scheme == "https" || scheme == "http"
     }
     private func publishSharing(_ config: Configuration) {
         do {
