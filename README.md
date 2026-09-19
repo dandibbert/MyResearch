@@ -4,9 +4,11 @@
 
 [产品设计文档](docs/PRODUCT_DESIGN.md) · [安装与构建](docs/INSTALL.md) · [分享扩展](docs/SHARE_EXTENSION.md) · [GitHub Actions](../../actions/workflows/ios.yml)
 
-## 1.1
+## 1.2
 
-三个页签：搜索 / 我的链接 / 设置。自动弹出键盘；跟手输入框；独立固定原词行；候选正文 + 多搜索源按钮；Bing/Google/本地/关闭联想；`{query}` 模板、前后缀 Trigger、HTTPS 兜底；手动排序、预设、启停；本地历史及 JSON 导入导出。
+三个页签：搜索 / 我的链接 / 设置。自动弹出键盘；跟手输入框；独立固定原词行；候选正文 + **可横向滑动的全部启用来源快捷栏**（严格跟随「我的链接」手动排序）；来源卡片按完整行显示，不再露出半截下一项；Bing/Google/本地/关闭联想；`{query}` 模板、前后缀 Trigger、HTTPS 兜底；手动排序、预设、启停；本地历史及 JSON 导入导出。
+
+1.2 新增 **App 内 Safari**：设置里有全局总开关，每个链接可独立选择。HTTP/HTTPS 搜索使用 `SFSafariViewController` 留在 MyResearch 内；自定义 App Scheme 仍交给系统跳转，失败后的 HTTPS 兜底也遵循该来源的开关。
 
 分享扩展现支持文字优先读取、可编辑输入、联想和固定原词、Trigger、逐词多来源按钮；主 App 配置经共享钥匙串自动复用。点击来源优先尝试目标 App／系统浏览器，失败保留文字并提供网页搜索或主 App 接力。兼容跳转不是 Apple 保证的扩展能力；重签必须保留两个目标相同的钥匙串组才能自动共享配置。
 
