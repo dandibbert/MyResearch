@@ -15,6 +15,7 @@ struct MyResearchApp: App {
 struct RootView: View {
     @EnvironmentObject private var store: AppStore
     @State private var keyboardVisible = false
+    @State private var testSharing = false
     var body: some View {
         VStack(spacing: 0) {
             Group {
@@ -34,11 +35,15 @@ struct RootView: View {
                 .background(ResearchStyle.surface)
                 .overlay(alignment: .top) { Divider() }
             }
+            if store.testMode && ProcessInfo.processInfo.arguments.contains("--share-fixture") {
+                Button("分享测试文字") { testSharing = true }.accessibilityIdentifier("system-share-test")
+            }
             if store.testMode, !store.lastOpenedURL.isEmpty {
                 Text(store.lastOpenedURL).font(.caption2).lineLimit(1).accessibilityIdentifier("last-opened-url")
             }
         }
         .background(ResearchStyle.background)
+        .sheet(isPresented: $testSharing) { SystemShareSheet(text: store.query, includeURL: true) }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { note in
             if let frame = note.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
                 keyboardVisible = frame.minY < UIScreen.main.bounds.height - 20

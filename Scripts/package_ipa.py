@@ -62,3 +62,8 @@ for path in sorted(out.glob('*.ipa')):
 (out/'SHA256SUMS.txt').write_text('\n'.join(checksums)+'\n')
 for source,name in [('docs/INSTALL.md','INSTALL.md'),('docs/PRODUCT_DESIGN.md','PRODUCT_DESIGN.md')]:
     if (root/source).exists(): shutil.copy2(root/source,out/name)
+# No certificate is included; only templates and re-signing guidance.
+if (root/'Signing').is_dir():
+    shutil.copytree(root/'Signing', out/'Signing', dirs_exist_ok=True)
+if (root/'docs/SHARE_EXTENSION.md').exists():
+    shutil.copy2(root/'docs/SHARE_EXTENSION.md', out/'SHARE_EXTENSION.md')

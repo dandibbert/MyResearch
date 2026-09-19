@@ -21,6 +21,7 @@ struct SettingsScreen: View {
     @State private var confirmImport = false
     @State private var confirmClear = false
     @State private var help = false
+    @State private var sharing = false
 
     private func setting<Value>(_ keyPath: WritableKeyPath<AppSettings, Value>) -> Binding<Value> {
         Binding(get: { store.configuration.settings[keyPath: keyPath] }, set: { value in store.updateSettings { $0[keyPath: keyPath] = value } })
@@ -59,12 +60,16 @@ struct SettingsScreen: View {
                 } header: { Text("备份与迁移") }
                   footer: { Text("导出不含搜索历史。导入前会验证并确认替换，替换前在本机自动保留旧配置备份。无需 iCloud 或 App Groups。") }
                 Section("快速搜索") {
+                    Button("测试分享扩展", systemImage: "square.and.arrow.up") { sharing = true }
+                        .accessibilityIdentifier("test-system-share")
+                    Button("更新共享配置", systemImage: "arrow.triangle.2.circlepath") { store.refreshSharing() }
+                    Text(store.sharingStatus).font(.caption).foregroundStyle(.secondary)
                     Button("分享扩展与安装说明", systemImage: "square.and.arrow.up.on.square") { help = true }
                     Text("快捷指令可使用 myresearch://search?q=关键词 打开搜索页；附加 &target=google&run=1 可立即搜索。")
                         .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                 }
                 Section {
-                    LabeledContent("MyResearch", value: "1.0.0")
+                    LabeledContent("MyResearch", value: "1.1.0")
                     Text("打开就输入。原词始终在手边。")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
@@ -95,6 +100,7 @@ struct SettingsScreen: View {
                 Button("清空历史", role: .destructive) { store.clearHistory() }
             }
             .sheet(isPresented: $help) { ExtensionHelp() }
+            .sheet(isPresented: $sharing) { SystemShareSheet(text: store.query.isEmpty ? "春莱布" : store.query, includeURL: store.testMode) }
         }
     }
 }
@@ -105,15 +111,18 @@ struct ExtensionHelp: View {
         NavigationStack {
             List {
                 Section("完整包") {
-                    Text("在支持分享文字或网页地址的 App 中，打开分享菜单并选择 MyResearch。选择来源后，在扩展里进行网页搜索。")
-                    Text("扩展使用独立预设；自定义来源可先从主 App 导出 JSON，再在扩展的「导入配置」中载入。当前版本不自动同步两者配置。")
+                    Text("选中文字 → 分享 → MyResearch → 点来源，优先尝试打开目标 App／系统浏览器。长按来源可改用扩展内网页搜索或复制链接。")
+                    Text("完整包带共享钥匙串配置。签名保留相同 keychain-access-groups 时，扩展自动复用主 App 的链接、顺序、默认来源、Trigger 和联想设置；扩展会显示真实同步状态。")
                 }
                 Section("安装方式") {
                     Text("未签名 IPA 需要你的签名工具处理后安装。完整包必须同时签名主 App 和扩展；不需要扩展时可选择 core 包。")
                     Text("LiveContainer 等容器式运行方式不保证系统注册分享扩展。主 App 的搜索功能不依赖扩展、iCloud 或 App Groups。")
                 }
+                Section("配置共享") {
+                    Text("同一签名团队不等于同一钥匙串组。重签工具若为主 App 和扩展分别重写分组，自动同步会失效；可保留交付包 Signing 中的配置，或者在扩展选择主 App 接力／导入 JSON。不要求 iCloud 或 App Groups。")
+                }
                 Section("边界") {
-                    Text("扩展内网页搜索与主 App 原生跳转不是同一种行为。未使用私有 API 绕过 iOS 的扩展限制；部分网页可能要求登录或不支持嵌入式浏览。")
+                    Text("兼容跳转面向自签版，使用现代 open 方法；并非 Apple 对分享扩展保证的能力。系统或宿主可拒绝，只有打开回调成功才关闭扩展。失败可在主 App 继续、搜索网页或复制文字。")
                 }
             }.navigationTitle("快速搜索").navigationBarTitleDisplayMode(.inline)
                 .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { dismiss() } } }

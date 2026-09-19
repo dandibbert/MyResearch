@@ -2,39 +2,34 @@
 
 ## 选择 IPA
 
-- `MyResearch-unsigned.ipa`：主 App + 快速搜索分享扩展。签名工具必须一起签名嵌入的扩展。
-- `MyResearch-core-unsigned.ipa`：同一主 App，去除了扩展；用于不需要分享扩展或容器式运行的场景。
+`MyResearch-unsigned.ipa` 是主 App + 快速搜索分享扩展；签名工具必须一起签名嵌入的扩展。`MyResearch-core-unsigned.ipa` 是同一主 App 去除扩展的版本。
 
-两个包使用相同 Bundle ID，是替代安装而非可并存版本。下载 GitHub Actions 的 `MyResearch-unsigned-IPA` artifact 并解压后选择 `.ipa`；外层 artifact ZIP 不是 IPA。
+两个包使用相同 Bundle ID，是替代安装而非可并存版本。Actions 的外层 artifact ZIP 不是 IPA，解压后选择其中 `.ipa`。这些是真机 arm64 未签名产物，需要自己的签名／安装工具处理；不需要向 GitHub 上传 Apple 账号、p12 或 mobileprovision。
 
-这些是真机 arm64、未签名产物，不是可直接点安装的 App Store 包。使用自己现有的签名/安装工具处理后安装；本项目不需要把 Apple 账号、p12 或 mobileprovision 上传 GitHub。不同签名工具、证书或容器的安装效果尚需真机验证。
+LiveContainer 不保证系统注册客体 App 的分享扩展。测试分享应独立安装完整包。没有 iCloud / App Groups 权益；完整包为配置共享声明共同钥匙串组。变更签名团队或 Bundle ID 前先导出配置，不保证跨团队覆盖保留数据。
 
-LiveContainer 不保证系统注册客体 App 的分享扩展；使用 core 包可避免对系统扩展的依赖。没有申请 iCloud、App Groups 或特殊权限。更换签名团队或 Bundle ID 不保证覆盖保留旧数据；先导出配置。
+## 首次使用
 
-## 第一次打开
+主 App 自动弹出键盘；原词固定在输入框上方。点正文使用默认来源，右侧按钮指定来源，上方来源列表同样直接搜索。设置可选 Bing、Google、本地历史或关闭联想。
 
-首页自动弹出键盘。输入关键词后，下方高亮「原词」固定在输入框上方。点正文使用默认来源，点旁边图标使用指定来源；上方来源列表同样可以直接搜索。联想来自 Bing，可在设置切换 Google、仅本地历史或关闭。
+右上角收键盘后显示三个页签。在「我的链接」添加预设或 `{query}` 自定义模板，编辑拖拽排序。勾选「候选右侧」的前三个启用来源作为快捷按钮。`b 关键词` 或 `关键词 b` 后提交使用哔哩哔哩。
 
-点右上角键盘按钮收起键盘，底部会出现「搜索 / 我的链接 / 设置」。在「我的链接」添加预设或自定义 URL，使用 `{query}` 放置关键词。点「编辑」拖拽排序；勾选「候选右侧」的前三个启用来源作为快捷按钮。输入 `b 关键词` 或 `关键词 b` 后按键盘搜索会使用哔哩哔哩。
-
-内置预设以网页链接为主。能否跳到 App 由系统 Universal Links 和目标 App 控制；不代表每一款目标 App 的 URL Scheme 已实测。需要直接跳转时可自行设置 Scheme 与 HTTPS 兜底。
+预设以网页链接为主；URL Scheme 和 Universal Links 是否由第三方 App 接管需真机确认。可自行设置原生 Scheme 和 HTTPS 兜底。
 
 ## 分享扩展
 
-完整包安装且扩展被签名/系统注册后，在分享菜单选择 MyResearch。该入口在扩展内打开网页结果，不使用私有方法强行启动外部 App。扩展配置与主 App 隔离：默认使用内置预设；主 App 导出 JSON 后，可在扩展导入。不宣称自动同步或已复现原版跨 App 跳转。
+签名安装完整包，包含 MyResearch.app 和其中 MyResearchShare.appex。先打开主 App 一次，再从其他 App 选中文字 → 分享 → MyResearch → 点击目标。点来源或右侧快捷按钮优先尝试外部搜索，长按来源可改为扩展内网页搜索。输入可编辑，原词不随联想移动。
+
+看到「已同步主 App」时，来源、排序、启停、默认目标、Trigger 和联想设置均来自主 App。两个目标必须拥有相同的首个 keychain-access-groups；相同证书并不自动意味着相同分组。交付包 Signing/ 有说明与模板。若分组被重签工具改写，扩展会显示未同步，可点「在主 App 中选择我的来源」携带文字接力，不必重新输入；也可导入 JSON。
+
+兼容跳转不是 Apple 为分享扩展保证的功能，可能被系统或宿主阻止。只有成功回调才关闭扩展，失败保留文字并提供恢复按钮。设置中的「测试分享扩展」可以直接调出系统分享菜单检查。
 
 ## 自己构建
 
-macOS、Xcode 16.4 或兼容的新版本、Python 3。没有第三方包下载步骤。
+macOS、Xcode 16.4 或兼容新版本、Python 3。无第三方包安装步骤。
 
 ```sh
 python3 Scripts/make_project.py
-open MyResearch.xcodeproj
-```
-
-终端编译：
-
-```sh
 swift test
 xcodebuild -project MyResearch.xcodeproj -scheme MyResearch \
   -configuration Release -sdk iphoneos -destination 'generic/platform=iOS' \
@@ -43,8 +38,8 @@ xcodebuild -project MyResearch.xcodeproj -scheme MyResearch \
 python3 Scripts/package_ipa.py
 ```
 
-产物在 `dist/`。`SHA256SUMS.txt` 用于校验；`build-info.json` 记录 commit、设备平台、SDK、Xcode 及版本。主应用 Bundle ID 为 `com.dandibbert.MyResearch`。
+产物在 dist/。SHA256SUMS.txt 可验真，build-info.json 记录 commit、SDK、Xcode、版本。主 Bundle ID 是 com.dandibbert.MyResearch。
 
 ## 验证边界
 
-核心测试和模拟器测试日志由 Actions 保存；第三方 App 深链、真实中文键盘组合输入、签名安装和实体机手感仍需要真机验证。未执行的项目不等于已通过。网络联想接口不承诺稳定可用；断网不影响固定原词操作。
+Actions 保存单元测试和真实模拟器分享流程日志。第三方 App 深链、实体机中文组合输入、各签名工具权限保留与实体机手感仍需验证。模拟器通过不代表所有设备均通过。网络联想接口没有可用性保证，断网不影响原词操作。

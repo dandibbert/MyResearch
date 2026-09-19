@@ -109,10 +109,15 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Run native UI tests
-        timeout-minutes: 8
+        timeout-minutes: 12
         run: |
           set -o pipefail
-          xcodebuild test -project MyResearch.xcodeproj -scheme MyResearch \
+          xcodebuild build-for-testing -project MyResearch.xcodeproj -scheme MyResearch \
+            -configuration Debug -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
+            -derivedDataPath build/Simulator CODE_SIGN_IDENTITY=- CODE_SIGNING_ALLOWED=YES \
+            2>&1 | tee build/share-test-build.log
+          xcrun simctl install "$SIMULATOR_ID" build/Simulator/Build/Products/Debug-iphonesimulator/MyResearchShareProbe.app
+          xcodebuild test-without-building -project MyResearch.xcodeproj -scheme MyResearch \
             -configuration Debug -destination "platform=iOS Simulator,id=$SIMULATOR_ID" \
             -derivedDataPath build/Simulator -resultBundlePath build/UI.xcresult \
             -parallel-testing-enabled NO -test-timeouts-enabled YES \
@@ -133,6 +138,7 @@ jobs:
           path: |
             build/ui-tests.log
             build/simulator-build.log
+            build/share-test-build.log
             build/ui-summary.json
             build/launch-preview
             build/UI.xcresult

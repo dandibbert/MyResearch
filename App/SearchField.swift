@@ -4,6 +4,7 @@ import UIKit
 struct SearchField: UIViewRepresentable {
     @Binding var text: String
     @Binding var focused: Bool
+    var identifier = "search-input"
     var submit: () -> Void
 
     func makeUIView(context: Context) -> UITextField {
@@ -17,7 +18,7 @@ struct SearchField: UIViewRepresentable {
         field.spellCheckingType = .no
         field.setContentHuggingPriority(.defaultLow, for: .horizontal)
         field.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
-        field.accessibilityIdentifier = "search-input"
+        field.accessibilityIdentifier = identifier
         field.delegate = context.coordinator
         field.addTarget(context.coordinator, action: #selector(Coordinator.changed(_:)), for: .editingChanged)
         return field

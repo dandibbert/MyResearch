@@ -10,6 +10,7 @@ final class AppStore: ObservableObject {
     @Published var errorMessage: String?
     @Published var lastOpenedURL = ""
     @Published private(set) var isOpening = false
+    @Published private(set) var sharingStatus = "尚未写入共享配置"
     let testMode = ProcessInfo.processInfo.arguments.contains("--ui-testing")
     private var storageBlocked = false
     private let fileURL: URL
@@ -18,7 +19,14 @@ final class AppStore: ObservableObject {
     init() {
         let base = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first ?? FileManager.default.temporaryDirectory
         fileURL = base.appendingPathComponent("MyResearch", isDirectory: true).appendingPathComponent("library.json")
+        defer { if !storageBlocked { publishSharing(configuration) } }
         if testMode {
+            if ProcessInfo.processInfo.arguments.contains("--share-fixture") {
+                configuration.targets.insert(SearchTarget(id: "share-probe", name: "测试目标 App", symbol: "arrow.up.forward.app", template: "myresearch-probe://search?q={query}", aliases: ["probe"], quickAccess: true), at: 0)
+                configuration.targets.insert(SearchTarget(id: "share-missing", name: "未安装的目标", template: "myresearch-missing-app://search?q={query}"), at: 1)
+                configuration.settings.defaultTargetID = "google"
+                configuration.settings.provider = .off
+            }
             if let argument = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("--query=") }) {
                 query = String(argument.dropFirst(8))
             }
@@ -38,7 +46,7 @@ final class AppStore: ObservableObject {
 
     private func persist(_ config: Configuration, _ records: [HistoryItem], recovering: Bool = false) throws {
         try ConfigurationCodec.validate(config)
-        guard !testMode else { return }
+        guard !testMode else { publishSharing(config); return }
         if storageBlocked && !recovering { throw ResearchError("原配置无法读取。请先在设置中导入有效配置；原文件会被备份。") }
         let directory = fileURL.deletingLastPathComponent()
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
@@ -48,6 +56,7 @@ final class AppStore: ObservableObject {
         }
         let data = try JSONEncoder().encode(SavedState(configuration: config, history: records))
         try data.write(to: fileURL, options: [.atomic, .completeFileProtectionUnlessOpen])
+        publishSharing(config)
     }
     func replaceConfiguration(_ newValue: Configuration) throws {
         try persist(newValue, history, recovering: true)
@@ -120,16 +129,27 @@ final class AppStore: ObservableObject {
             }
         }
     }
+    private func publishSharing(_ config: Configuration) {
+        do {
+            try SharedConfiguration.publish(config)
+            sharingStatus = "已写入共享钥匙串；扩展可用性以扩展内状态为准"
+        } catch { sharingStatus = error.localizedDescription }
+    }
+    func refreshSharing() { if !storageBlocked { publishSharing(configuration) } }
     func receive(_ url: URL) {
-        guard url.scheme?.lowercased() == "myresearch", url.host == "search",
-              let components = URLComponents(url: url, resolvingAgainstBaseURL: false) else { return }
-        let items = components.queryItems ?? []
-        query = String((items.first { $0.name == "q" }?.value ?? "").prefix(4096))
+        guard let handoff = ShareHandoff.parse(url) else { return }
+        query = handoff.query
         selectedTab = 0
-        if items.first(where: { $0.name == "run" })?.value == "1" {
-            let targetID = items.first { $0.name == "target" }?.value
-            let target = configuration.enabledTargets.first { $0.id == targetID } ?? configuration.defaultTarget
-            search(query, target: target)
+        guard handoff.run else { return }
+        let intent = SearchRouter.intent(for: query, configuration: configuration)
+        if let id = handoff.targetID {
+            guard let target = configuration.enabledTargets.first(where: { $0.id == id }) else {
+                errorMessage = "分享指定的来源已删除或停用，请重新选择。"
+                return
+            }
+            search(intent.query, target: target)
+        } else {
+            search(intent.query, target: configuration.enabledTargets.first { $0.id == intent.targetID } ?? configuration.defaultTarget)
         }
     }
 }
