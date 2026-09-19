@@ -99,6 +99,27 @@ final class CoreTests: XCTestCase {
     func testQuickTargetsRespectManualOrder() {
         var config = Configuration.initial
         config.targets.reverse()
-        XCTAssertEqual(config.quickTargets.map(\.id), ["xiaohongshu", "bilibili", "google"])
+        XCTAssertEqual(config.quickTargets.map(\.id), ["youtube", "baidu", "bing", "xiaohongshu", "bilibili", "google"])
+    }
+    func testLegacyConfigurationWithoutSafariFieldsStillDecodes() throws {
+        let legacy = """
+        {
+          "schemaVersion": 1,
+          "targets": [{
+            "id": "google", "name": "Google", "symbol": "globe", "tintHex": "4285F4",
+            "template": "https://www.google.com/search?q={query}", "fallbackTemplate": "",
+            "aliases": ["g"], "enabled": true, "quickAccess": true
+          }],
+          "settings": {
+            "autoFocus": true, "thumbLayout": true, "lightning": true,
+            "provider": "off", "historyEnabled": true, "maxSuggestions": 6,
+            "defaultTargetID": "google"
+          }
+        }
+        """
+        let config = try ConfigurationCodec.decode(Data(legacy.utf8))
+        XCTAssertTrue(config.settings.usesInAppSafari)
+        XCTAssertFalse(config.targets[0].usesInAppSafari)
+        XCTAssertEqual(config.quickTargets.map(\.id), ["google"])
     }
 }
