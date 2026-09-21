@@ -4,7 +4,11 @@
 
 [产品设计文档](docs/PRODUCT_DESIGN.md) · [安装与构建](docs/INSTALL.md) · [分享扩展](docs/SHARE_EXTENSION.md) · [GitHub Actions](../../actions/workflows/ios.yml)
 
-当前版本：1.2.0
+当前版本：1.2.1
+
+## 1.2.1
+
+修复配置 JSON 在部分 Files / iCloud / 第三方文件提供器中“看得到但点不动”的问题：导入改为原生 `UIDocumentPickerViewController`，接受 JSON、文本或通用数据类型作为文件选择入口，再由 MyResearch 严格解析和验证实际 JSON 内容。选择后等待系统文件选择器完全退出再显示替换确认，避免 iOS 27 丢失确认弹窗。主 App 和分享扩展使用同一套导入逻辑。
 
 ## 1.2
 
