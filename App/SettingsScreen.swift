@@ -73,7 +73,7 @@ struct SettingsScreen: View {
                         .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                 }
                 Section {
-                    LabeledContent("MyResearch", value: "1.2.0")
+                    LabeledContent("MyResearch", value: "1.2.1")
                     Text("打开就输入。原词始终在手边。")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
@@ -82,15 +82,25 @@ struct SettingsScreen: View {
             .fileExporter(isPresented: $exporting, document: exportDocument, contentType: .json, defaultFilename: "MyResearch-links") { result in
                 if case .failure(let error) = result { store.errorMessage = error.localizedDescription }
             }
-            .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in
-                do {
-                    let url = try result.get()
-                    let access = url.startAccessingSecurityScopedResource()
-                    defer { if access { url.stopAccessingSecurityScopedResource() } }
-                    if let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize, size > 2_000_000 { throw ResearchError("配置文件不能超过 2 MB。") }
-                    pendingImport = try ConfigurationCodec.decode(Data(contentsOf: url))
-                    confirmImport = true
-                } catch { store.errorMessage = error.localizedDescription }
+            .sheet(isPresented: $importing) {
+                ConfigurationDocumentPicker { url in
+                    importing = false
+                    guard let url else { return }
+                    do {
+                        let imported = try ConfigurationImport.load(url)
+                        // Present the confirmation after the document picker has actually
+                        // left the hierarchy; iOS 27 may otherwise drop the dialog.
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                            pendingImport = imported
+                            confirmImport = true
+                        }
+                    } catch {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                            store.errorMessage = error.localizedDescription
+                        }
+                    }
+                }
+                .ignoresSafeArea()
             }
             .confirmationDialog("替换当前链接与设置？", isPresented: $confirmImport, titleVisibility: .visible) {
                 Button("替换为 \(pendingImport?.targets.count ?? 0) 个链接", role: .destructive) {
