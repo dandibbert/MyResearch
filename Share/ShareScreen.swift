@@ -100,15 +100,23 @@ struct ShareScreen: View {
                         .toolbar { ToolbarItem(placement: .confirmationAction) { Button("完成") { showHelp = false } } }
                 }
             }
-            .fileImporter(isPresented: $importing, allowedContentTypes: [.json]) { result in
-                do {
-                    let url = try result.get()
-                    let access = url.startAccessingSecurityScopedResource()
-                    defer { if access { url.stopAccessingSecurityScopedResource() } }
-                    if let size = try url.resourceValues(forKeys: [.fileSizeKey]).fileSize, size > 2_000_000 { throw ResearchError("配置文件不能超过 2 MB。") }
-                    pendingImport = try ConfigurationCodec.decode(Data(contentsOf: url))
-                    confirmImport = true
-                } catch { model.error = error.localizedDescription }
+            .sheet(isPresented: $importing) {
+                ConfigurationDocumentPicker { url in
+                    importing = false
+                    guard let url else { return }
+                    do {
+                        let imported = try ConfigurationImport.load(url)
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                            pendingImport = imported
+                            confirmImport = true
+                        }
+                    } catch {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
+                            model.error = error.localizedDescription
+                        }
+                    }
+                }
+                .ignoresSafeArea()
             }
             .confirmationDialog("使用导入的 \(pendingImport?.targets.count ?? 0) 个来源？", isPresented: $confirmImport, titleVisibility: .visible) {
                 Button("仅替换扩展配置") {
