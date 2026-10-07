@@ -192,6 +192,7 @@ struct TargetEditor: View {
     @State private var templateSelection: NSRange
     @State private var httpURLSelection: NSRange
     @State private var httpHeadersSelection: NSRange
+    @State private var openAIHeadersSelection: NSRange
     @State private var bodySelection: NSRange
     @State private var promptSelection: NSRange
 
@@ -212,6 +213,7 @@ struct TargetEditor: View {
         _templateSelection = State(initialValue: NSRange(location: (target.template as NSString).length, length: 0))
         _httpURLSelection = State(initialValue: NSRange(location: (http.url as NSString).length, length: 0))
         _httpHeadersSelection = State(initialValue: NSRange(location: (Self.encodeHeaders(http.headers) as NSString).length, length: 0))
+        _openAIHeadersSelection = State(initialValue: NSRange(location: (Self.encodeHeaders(translator.openAI?.extraHeaders ?? [:]) as NSString).length, length: 0))
         _bodySelection = State(initialValue: NSRange(location: (http.bodyTemplate as NSString).length, length: 0))
         _promptSelection = State(initialValue: NSRange(location: (prompt as NSString).length, length: 0))
     }
@@ -605,12 +607,12 @@ struct TargetEditor: View {
                                 .foregroundStyle(.secondary)
                             CursorTemplateEditor(
                                 text: $openAIHeadersText,
-                                selection: $httpHeadersSelection,
+                                selection: $openAIHeadersSelection,
                                 placeholder: #"{"X-Provider":"value"}"#,
                                 identifier: "translator-openai-headers"
                             )
                             Button("{credential}") {
-                                insert("{credential}", into: $openAIHeadersText, selection: $httpHeadersSelection)
+                                insert("{credential}", into: $openAIHeadersText, selection: $openAIHeadersSelection)
                             }
                             .font(.caption)
                         }
