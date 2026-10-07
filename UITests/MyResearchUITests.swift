@@ -110,7 +110,7 @@ final class MyResearchUITests: XCTestCase {
 
         XCTAssertTrue(app.navigationBars["编辑翻译引擎"].waitForExistence(timeout: 4))
         XCTAssertTrue(app.buttons["获取模型列表"].exists)
-        XCTAssertTrue(app.buttons["translator-advanced-settings"].exists || app.otherElements["translator-advanced-settings"].exists)
+        XCTAssertTrue(app.staticTexts["translator-advanced-settings-label"].exists)
         XCTAssertFalse(app.staticTexts["System Prompt"].exists)
         shot("06-translator-editor")
     }
