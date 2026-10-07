@@ -127,19 +127,41 @@ struct SearchScreen: View {
                 if store.history.isEmpty || !store.configuration.settings.historyEnabled {
                     emptyState("输入一次，搜到任何地方", detail: "打开即输入 · 一次点击跳转")
                 } else {
-                    ScrollView {
-                        LazyVStack(spacing: 2) {
-                            ForEach(store.history.prefix(12)) { item in
-                                Button { store.query = item.query; focused = true } label: {
-                                    HStack {
-                                        Image(systemName: "clock.arrow.circlepath").foregroundStyle(.secondary)
-                                        Text(item.query).lineLimit(1).foregroundStyle(.primary)
-                                        Spacer(); Image(systemName: "arrow.up.left").foregroundStyle(.tertiary)
-                                    }.font(.subheadline).padding(.horizontal, 10).frame(minHeight: 44).contentShape(Rectangle())
-                                }.buttonStyle(.plain)
+                    List {
+                        ForEach(Array(store.history.prefix(12))) { item in
+                            Button { store.query = item.query; focused = true } label: {
+                                HStack(spacing: 10) {
+                                    Image(systemName: "clock.arrow.circlepath")
+                                        .foregroundStyle(.secondary)
+                                    Text(item.query)
+                                        .lineLimit(1)
+                                        .foregroundStyle(.primary)
+                                    Spacer(minLength: 8)
+                                    Image(systemName: "arrow.up.left")
+                                        .font(.caption)
+                                        .foregroundStyle(.tertiary)
+                                }
+                                .font(.subheadline)
+                                .frame(minHeight: 44)
+                                .contentShape(Rectangle())
                             }
+                            .buttonStyle(.plain)
+                            .accessibilityIdentifier("history-\(item.id)")
+                            .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                Button(role: .destructive) {
+                                    store.deleteHistory(id: item.id)
+                                } label: {
+                                    Label("删除", systemImage: "trash")
+                                }
+                            }
+                            .listRowInsets(EdgeInsets(top: 0, leading: 10, bottom: 0, trailing: 8))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
                         }
-                    }.scrollDismissesKeyboard(.never)
+                    }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
+                    .scrollDismissesKeyboard(.never)
                 }
             } else if suggestions.values.isEmpty {
                 emptyState(suggestions.loading ? "正在获取联想…" : "直接搜索下方原词", detail: "原词固定在手边，不随候选移动")
