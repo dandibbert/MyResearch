@@ -29,7 +29,7 @@ struct RootView: View {
             if !keyboardVisible || store.selectedTab != 0 {
                 HStack(spacing: 0) {
                     tab("搜索", symbol: "magnifyingglass", index: 0)
-                    tab("我的链接", symbol: "link", index: 1)
+                    tab("我的来源", symbol: "link", index: 1)
                     tab("设置", symbol: "slider.horizontal.3", index: 2)
                 }
                 .padding(.top, 7).padding(.bottom, 3)
@@ -45,6 +45,9 @@ struct RootView: View {
         }
         .background(ResearchStyle.background)
         .sheet(isPresented: $testSharing) { SystemShareSheet(text: store.query, includeURL: true) }
+        .sheet(item: $store.translationDestination) { destination in
+            TranslationResultsScreen(destination: destination, sources: store.configuration.enabledTranslators)
+        }
         .fullScreenCover(isPresented: Binding(
             get: { store.safariURL != nil },
             set: { if !$0 { store.safariURL = nil } }

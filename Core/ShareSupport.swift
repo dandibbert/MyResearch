@@ -53,8 +53,8 @@ struct ConfigurationSnapshot: Codable {
     var updatedAt = Date()
     static func decode(_ data: Data) throws -> ConfigurationSnapshot {
         guard data.count <= 2_100_000 else { throw ResearchError("共享配置过大。") }
-        let value = try JSONDecoder().decode(Self.self, from: data)
-        try ConfigurationCodec.validate(value.configuration)
+        var value = try JSONDecoder().decode(Self.self, from: data)
+        value.configuration = try ConfigurationCodec.normalize(value.configuration)
         return value
     }
 }

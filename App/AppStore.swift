@@ -10,6 +10,7 @@ final class AppStore: ObservableObject {
     @Published var errorMessage: String?
     @Published var lastOpenedURL = ""
     @Published var safariURL: URL?
+    @Published var translationDestination: TranslationDestination?
     @Published private(set) var isOpening = false
     @Published private(set) var sharingStatus = "尚未写入共享配置"
     let testMode = ProcessInfo.processInfo.arguments.contains("--ui-testing")
@@ -36,8 +37,7 @@ final class AppStore: ObservableObject {
         guard FileManager.default.fileExists(atPath: fileURL.path) else { return }
         do {
             let state = try JSONDecoder().decode(SavedState.self, from: Data(contentsOf: fileURL))
-            try ConfigurationCodec.validate(state.configuration)
-            configuration = state.configuration
+            configuration = try ConfigurationCodec.normalize(state.configuration)
             history = Array(state.history.prefix(100))
         } catch {
             storageBlocked = true
@@ -108,7 +108,14 @@ final class AppStore: ObservableObject {
     }
     func search(_ text: String, target: SearchTarget?, recordHistory: Bool = true) {
         guard !isOpening else { return }
-        guard let target else { errorMessage = "没有启用的搜索来源。请到「我的链接」添加或启用一个。"; return }
+        guard let target else { errorMessage = "没有启用的搜索来源。请到「我的来源」添加或启用一个。"; return }
+        if target.kind == .translator {
+            let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !value.isEmpty else { errorMessage = "先输入要翻译的内容。"; return }
+            translationDestination = TranslationDestination(text: value, preferredTargetID: target.id)
+            if recordHistory { record(query: value, target: target) }
+            return
+        }
         let url: URL
         do { url = try TemplateEngine.url(template: target.template, query: text) }
         catch { errorMessage = error.localizedDescription; return }

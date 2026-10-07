@@ -89,6 +89,9 @@ struct ShareScreen: View {
                     return await open(url, model.compatibility)
                 })
             }
+            .sheet(item: $model.translationDestination) { destination in
+                TranslationResultsScreen(destination: destination, sources: model.configuration.enabledTranslators)
+            }
             .sheet(isPresented: $showHelp) {
                 NavigationStack {
                     List {
@@ -141,15 +144,21 @@ struct ShareScreen: View {
             ScrollView {
                 LazyVStack(spacing: 0) {
                     ForEach(model.configuration.enabledTargets) { target in
-                        Button { model.search(model.intent.query, target: target) } label: { SourceRow(target: target) }
+                        Button { model.search(model.intent.query, target: target) } label: {
+                                SourceRow(target: target, detail: target.translatorDetail)
+                            }
                             .buttonStyle(.plain).accessibilityIdentifier("share-target-\(target.id)")
                             .disabled(model.opening || model.loading || (model.intent.query.isEmpty && !target.isAction))
                             .contextMenu {
-                                Button("打开 App／系统浏览器") { model.search(model.intent.query, target: target) }
-                                Button("在扩展内搜索网页") { model.browse(model.intent.query, target: target) }
-                                Button("复制搜索链接") {
-                                    do { UIPasteboard.general.string = try TemplateEngine.url(template: target.template, query: model.intent.query).absoluteString }
-                                    catch { model.error = error.localizedDescription }
+                                if target.kind == .translator {
+                                    Button("翻译") { model.search(model.intent.query, target: target) }
+                                } else {
+                                    Button("打开 App／系统浏览器") { model.search(model.intent.query, target: target) }
+                                    Button("在扩展内搜索网页") { model.browse(model.intent.query, target: target) }
+                                    Button("复制搜索链接") {
+                                        do { UIPasteboard.general.string = try TemplateEngine.url(template: target.template, query: model.intent.query).absoluteString }
+                                        catch { model.error = error.localizedDescription }
+                                    }
                                 }
                             }
                         if target.id != model.configuration.enabledTargets.last?.id { Divider().padding(.leading, 46) }

@@ -4,7 +4,19 @@
 
 [产品设计文档](docs/PRODUCT_DESIGN.md) · [安装与构建](docs/INSTALL.md) · [分享扩展](docs/SHARE_EXTENSION.md) · [GitHub Actions](../../actions/workflows/ios.yml)
 
-当前版本：1.2.1
+当前版本：1.3.0
+
+
+## 1.3
+
+MyResearch 开始从“搜索入口”扩展成通用输入分发器：
+
+- 来源 schema 升级到 v2，新增 kind: link | translator；v1 配置会自动迁移为 link，不需要手工重做。
+- 新增独立 SPM target TranslationCore，仅依赖 Foundation。支持 OpenAI Chat Completions（SSE 流式）和通用 HTTP 翻译引擎；HTTP 可配置 Method、URL、Headers、JSON/Form/Raw Body，并用 JSON Path 提取译文。
+- 翻译引擎与搜索链接共用排序、启停和 Trigger；点翻译来源后显示多引擎结果卡。点中的引擎与 Auto Run 引擎并发执行，其余可手动运行或一次“全部翻译”。
+- 默认使用 NaturalLanguage 检测输入：中文优先翻成英文，其他语言优先翻成中文，并可在结果页对调方向。
+- API Key 使用共享 Keychain 单独保存，配置 JSON 只导出 Credential ID，不包含密钥；主 App 与分享扩展可复用同一 Key。
+- 修复模板按钮总把 {query} 追加到末尾的问题；现在按 UITextView 的 UTF-16 光标/选区精确插入，也用于翻译模板的 {text} / {from} / {to} / {credential}。
 
 ## 1.2.1
 

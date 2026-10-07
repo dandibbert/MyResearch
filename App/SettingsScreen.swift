@@ -38,8 +38,8 @@ struct SettingsScreen: View {
                     ))
                     Toggle("闪电模式 · Trigger", isOn: setting(\.lightning))
                     Picker("默认搜索", selection: Binding(get: { store.configuration.defaultTarget?.id ?? "" }, set: { id in store.updateSettings { $0.defaultTargetID = id } })) {
-                        if store.configuration.enabledTargets.isEmpty { Text("无启用来源").tag("") }
-                        ForEach(store.configuration.enabledTargets) { target in Text(target.name).tag(target.id) }
+                        if store.configuration.enabledLinks.isEmpty { Text("无启用来源").tag("") }
+                        ForEach(store.configuration.enabledLinks) { target in Text(target.name).tag(target.id) }
                     }
                 } header: { Text("搜索体验") }
                   footer: { Text("跟手布局把输入框和固定原词行放在键盘上方。App 内 Safari 总开关只影响在「我的链接」中单独开启该选项的网页来源；来源顺序仍由「我的链接」手动调整。") }
@@ -56,13 +56,13 @@ struct SettingsScreen: View {
                 } header: { Text("隐私") }
                   footer: { Text("历史仅保存在本机。关闭后停止记录与展示，已有数据可单独清空。不自动读取剪贴板，无遥测或自建服务器。") }
                 Section {
-                    Button("导出链接与设置", systemImage: "square.and.arrow.up") {
+                    Button("导出来源与设置", systemImage: "square.and.arrow.up") {
                         do { exportDocument = ConfigurationFile(data: try ConfigurationCodec.encode(store.configuration)); exporting = true }
                         catch { store.errorMessage = error.localizedDescription }
                     }
                     Button("导入配置 JSON", systemImage: "square.and.arrow.down") { importing = true }
                 } header: { Text("备份与迁移") }
-                  footer: { Text("导出不含搜索历史。导入前会验证并确认替换，替换前在本机自动保留旧配置备份。无需 iCloud 或 App Groups。") }
+                  footer: { Text("导出不含搜索历史，也绝不会包含翻译 API Key；只保留 Credential ID。导入前会验证并确认替换，替换前在本机自动保留旧配置备份。") }
                 Section("快速搜索") {
                     Button("测试分享扩展", systemImage: "square.and.arrow.up") { sharing = true }
                         .accessibilityIdentifier("test-system-share")
@@ -73,7 +73,7 @@ struct SettingsScreen: View {
                         .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                 }
                 Section {
-                    LabeledContent("MyResearch", value: "1.2.1")
+                    LabeledContent("MyResearch", value: "1.3.0")
                     Text("打开就输入。原词始终在手边。")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
