@@ -708,6 +708,7 @@ struct TargetEditor: View {
                     }
                     .padding(.top, 8)
                 }
+                .accessibilityIdentifier("translator-advanced-settings")
             } footer: {
                 Text("这些选项通常不需要改。Credential ID、额外 Header、Prompt 与 Temperature 都收在这里。")
             }
