@@ -111,7 +111,13 @@ refs = {}
 for path in all_paths:
     kind = 'sourcecode.swift' if path.endswith('.swift') else ('folder.assetcatalog' if path.endswith('.xcassets') else ('sourcecode.javascript' if path.endswith('.js') else 'text.xml'))
     refs[path] = obj('file:'+path, isa='PBXFileReference', lastKnownFileType=kind, path=path, sourceTree='SOURCE_ROOT')
-products = {
+phosphor_package = obj(
+    'package:PhosphorSwift',
+    isa='XCRemoteSwiftPackageReference',
+    repositoryURL='https://github.com/phosphor-icons/swift',
+    requirement={'kind':'revision','revision':'3289615c203e57d2604c97d0e89ece1d431c9475'},
+)
+phosphor_products = {
     'MyResearch': obj('package-product:app:PhosphorSwift', isa='XCSwiftPackageProductDependency', package=phosphor_package, productName='PhosphorSwift'),
     'MyResearchShare': obj('package-product:share:PhosphorSwift', isa='XCSwiftPackageProductDependency', package=phosphor_package, productName='PhosphorSwift'),
 }
