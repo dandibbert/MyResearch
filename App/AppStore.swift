@@ -10,6 +10,7 @@ final class AppStore: ObservableObject {
     @Published var errorMessage: String?
     @Published var lastOpenedURL = ""
     @Published var safariURL: URL?
+    @Published var translationLaunchRequest: TranslationLaunchRequest?
     @Published var translationDestination: TranslationDestination?
     @Published private(set) var isOpening = false
     @Published private(set) var sharingStatus = "尚未写入共享配置"
@@ -123,8 +124,7 @@ final class AppStore: ObservableObject {
         if target.kind == .translator {
             let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !value.isEmpty else { errorMessage = "先输入要翻译的内容。"; return }
-            translationDestination = TranslationDestination(text: value, preferredTargetID: target.id)
-            if recordHistory { record(query: value, target: target) }
+            beginTranslation(value, target: target, recordHistory: recordHistory)
             return
         }
         let url: URL
@@ -158,6 +158,87 @@ final class AppStore: ObservableObject {
             }
         }
     }
+    private func beginTranslation(_ text: String, target: SearchTarget, recordHistory: Bool) {
+        let settings = configuration.settings
+        if settings.usesTranslationPairPrompt {
+            translationLaunchRequest = TranslationLaunchRequest(
+                text: text,
+                preferredTargetID: target.id,
+                recordHistory: recordHistory
+            )
+            return
+        }
+
+        let route = TranslationLanguageRouter.route(
+            text,
+            preferredTarget: settings.translationPreferredTargetLanguage,
+            lastSource: settings.lastTranslationSourceLanguage,
+            lastTarget: settings.lastTranslationTargetLanguage
+        )
+        launchTranslation(
+            text: text,
+            target: target,
+            sourceLanguage: route.source,
+            targetLanguage: route.target,
+            recordHistory: recordHistory
+        )
+    }
+
+    func confirmTranslationLaunch(sourceLanguage: String, targetLanguage: String) {
+        guard let request = translationLaunchRequest,
+              let target = configuration.enabledTranslators.first(where: { $0.id == request.preferredTargetID }) else {
+            translationLaunchRequest = nil
+            return
+        }
+        launchTranslation(
+            text: request.text,
+            target: target,
+            sourceLanguage: sourceLanguage,
+            targetLanguage: targetLanguage,
+            recordHistory: request.recordHistory
+        )
+    }
+
+    func cancelTranslationLaunch() {
+        translationLaunchRequest = nil
+    }
+
+    private func launchTranslation(
+        text: String,
+        target: SearchTarget,
+        sourceLanguage: String,
+        targetLanguage: String,
+        recordHistory: Bool
+    ) {
+        var next = configuration
+        next.settings.lastTranslationSourceLanguage = sourceLanguage
+        next.settings.lastTranslationTargetLanguage = targetLanguage
+
+        var records = history
+        if recordHistory {
+            records = SuggestionLogic.recording(records, query: text, targetID: target.id)
+        }
+
+        do {
+            try persist(next, records)
+            configuration = next
+            history = records
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+
+        translationLaunchRequest = nil
+        let destination = TranslationDestination(
+            text: text,
+            preferredTargetID: target.id,
+            sourceLanguage: sourceLanguage,
+            targetLanguage: targetLanguage
+        )
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
+            self?.translationDestination = destination
+        }
+    }
+
     private func shouldOpenInAppSafari(_ url: URL, target: SearchTarget) -> Bool {
         guard configuration.settings.usesInAppSafari, target.usesInAppSafari else { return false }
         let scheme = url.scheme?.lowercased() ?? ""
