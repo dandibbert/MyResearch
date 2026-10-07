@@ -293,72 +293,7 @@ struct TargetEditor: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("显示") {
-                    HStack {
-                        TargetIcon(target: draft, size: 40)
-                        TextField("来源名称", text: $draft.name)
-                            .accessibilityIdentifier("target-name")
-                    }
-                    Picker("类型", selection: $draft.kind) {
-                        ForEach(SourceKind.allCases) { kind in Text(kind.title).tag(kind) }
-                    }
-                    .onChange(of: draft.kind) { _, kind in
-                        if kind == .translator, draft.translator == nil {
-                            translatorDraft = .openAIDefault
-                            if translatorDraft.credentialID == nil {
-                                translatorDraft.credentialID = "translator.\(draft.id)"
-                            }
-                            draft.symbol = "ph:translate"
-                        }
-                    }
-
-                    Button { showIconPicker = true } label: {
-                        HStack {
-                            Text("图标").foregroundStyle(.primary)
-                            Spacer()
-                            TargetIcon(target: draft, size: 34)
-                            Text(IconCatalog.displayName(for: draft.symbol))
-                                .font(.subheadline)
-                                .foregroundStyle(.secondary)
-                                .lineLimit(1)
-                            Image(systemName: "chevron.right")
-                                .font(.caption.weight(.semibold))
-                                .foregroundStyle(.tertiary)
-                        }
-                        .contentShape(Rectangle())
-                    }
-                    .buttonStyle(.plain)
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("颜色").font(.caption).foregroundStyle(.secondary)
-                        ScrollView(.horizontal, showsIndicators: false) {
-                            HStack(spacing: 6) {
-                                ForEach(colors, id: \.self) { color in
-                                    Button { draft.tintHex = color } label: {
-                                        Circle()
-                                            .fill(Color(hex: color))
-                                            .frame(width: 30, height: 30)
-                                            .overlay {
-                                                if draft.tintHex == color {
-                                                    Image(systemName: "checkmark")
-                                                        .font(.caption.bold())
-                                                        .foregroundStyle(.white)
-                                                }
-                                            }
-                                            .overlay {
-                                                Circle()
-                                                    .strokeBorder(Color.primary.opacity(draft.tintHex == color ? 0.18 : 0), lineWidth: 2)
-                                                    .padding(-3)
-                                            }
-                                            .frame(width: 44, height: 44)
-                                    }
-                                    .buttonStyle(.plain)
-                                    .accessibilityLabel("颜色 \(color)")
-                                }
-                            }
-                        }
-                    }
-                }
+                displaySection
 
                 if draft.kind == .link {
                     linkSections
@@ -399,6 +334,119 @@ struct TargetEditor: View {
             }
             .onChange(of: translatorDraft.credentialID) { _, id in
                 credentialPresent = id.map(SharedCredentialStore.contains) ?? false
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var displaySection: some View {
+        if draft.kind == .translator {
+            Section {
+                HStack(spacing: 12) {
+                    TargetIcon(target: draft, size: 44)
+                    VStack(alignment: .leading, spacing: 3) {
+                        TextField("翻译来源名称", text: $draft.name)
+                            .font(.body.weight(.semibold))
+                            .accessibilityIdentifier("target-name")
+                        Text(translatorDraft.engine == .openAIChat ? "AI 模型翻译" : "HTTP 翻译")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                DisclosureGroup("外观与类型") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        sourceTypePicker
+                        iconPickerRow
+                        colorPickerRow
+                    }
+                    .padding(.top, 7)
+                }
+            } header: {
+                Text("来源")
+            } footer: {
+                Text("名称是常用项；图标、颜色与来源类型平时收起，避免挡住连接和模型设置。")
+            }
+        } else {
+            Section("显示") {
+                HStack {
+                    TargetIcon(target: draft, size: 40)
+                    TextField("来源名称", text: $draft.name)
+                        .accessibilityIdentifier("target-name")
+                }
+                sourceTypePicker
+                iconPickerRow
+                colorPickerRow
+            }
+        }
+    }
+
+    private var sourceTypePicker: some View {
+        Picker("类型", selection: $draft.kind) {
+            ForEach(SourceKind.allCases) { kind in
+                Text(kind.title).tag(kind)
+            }
+        }
+        .onChange(of: draft.kind) { _, kind in
+            if kind == .translator, draft.translator == nil {
+                translatorDraft = .openAIDefault
+                if translatorDraft.credentialID == nil {
+                    translatorDraft.credentialID = "translator.\(draft.id)"
+                }
+                draft.symbol = "ph:translate"
+            }
+        }
+    }
+
+    private var iconPickerRow: some View {
+        Button { showIconPicker = true } label: {
+            HStack {
+                Text("图标").foregroundStyle(.primary)
+                Spacer()
+                TargetIcon(target: draft, size: 34)
+                Text(IconCatalog.displayName(for: draft.symbol))
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Image(systemName: "chevron.right")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private var colorPickerRow: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("颜色")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(colors, id: \.self) { color in
+                        Button { draft.tintHex = color } label: {
+                            Circle()
+                                .fill(Color(hex: color))
+                                .frame(width: 30, height: 30)
+                                .overlay {
+                                    if draft.tintHex == color {
+                                        Image(systemName: "checkmark")
+                                            .font(.caption.bold())
+                                            .foregroundStyle(.white)
+                                    }
+                                }
+                                .overlay {
+                                    Circle()
+                                        .strokeBorder(Color.primary.opacity(draft.tintHex == color ? 0.18 : 0), lineWidth: 2)
+                                        .padding(-3)
+                                }
+                                .frame(width: 44, height: 44)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("颜色 \(color)")
+                    }
+                }
             }
         }
     }
