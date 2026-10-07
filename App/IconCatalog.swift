@@ -1,5 +1,4 @@
 import SwiftUI
-import PhosphorSwift
 
 struct IconCatalogEntry: Identifiable, Hashable {
     let rawValue: String
@@ -100,16 +99,11 @@ enum IconCatalog {
     static func searchPhosphor(_ query: String) -> [IconCatalogEntry] {
         let term = query.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         guard !term.isEmpty else { return [] }
-        return Ph.allCases.compactMap { icon in
-            let raw = icon.rawValue
-            if let featured = featuredByRaw[raw] {
-                let haystack = ([featured.title, raw] + featured.keywords).joined(separator: " ").lowercased()
-                return haystack.contains(term) ? featured : nil
-            }
-            let title = raw.split(separator: "-").map { $0.capitalized }.joined(separator: " ")
-            return (raw.contains(term) || title.lowercased().contains(term))
-                ? IconCatalogEntry(rawValue: raw, title: title, keywords: [], category: "全部")
-                : nil
+        return featured.filter { item in
+            ([item.title, item.rawValue] + item.keywords)
+                .joined(separator: " ")
+                .lowercased()
+                .contains(term)
         }
     }
 }
@@ -168,7 +162,7 @@ struct IconPickerSheet: View {
             }
             VStack(alignment: .leading, spacing: 8) {
                 Text("更多图标").font(.headline)
-                Text("上方只放常用项。使用搜索可以直接检索 Phosphor 的全部 \(Ph.allCases.count) 个图标。")
+                Text("内置 \(IconCatalog.featured.count) 个适合搜索、翻译、AI、内容和工具的 Phosphor 图标；也保留一组系统图标兼容旧配置。")
                     .font(.caption).foregroundStyle(.secondary)
             }
             .frame(maxWidth: .infinity, alignment: .leading)

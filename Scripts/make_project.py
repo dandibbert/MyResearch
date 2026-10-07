@@ -111,13 +111,7 @@ refs = {}
 for path in all_paths:
     kind = 'sourcecode.swift' if path.endswith('.swift') else ('folder.assetcatalog' if path.endswith('.xcassets') else ('sourcecode.javascript' if path.endswith('.js') else 'text.xml'))
     refs[path] = obj('file:'+path, isa='PBXFileReference', lastKnownFileType=kind, path=path, sourceTree='SOURCE_ROOT')
-phosphor_package = obj(
-    'package:PhosphorSwift',
-    isa='XCRemoteSwiftPackageReference',
-    repositoryURL='https://github.com/phosphor-icons/swift',
-    requirement={'kind':'revision','revision':'3289615c203e57d2604c97d0e89ece1d431c9475'},
-)
-phosphor_products = {
+products = {
     'MyResearch': obj('package-product:app:PhosphorSwift', isa='XCSwiftPackageProductDependency', package=phosphor_package, productName='PhosphorSwift'),
     'MyResearchShare': obj('package-product:share:PhosphorSwift', isa='XCSwiftPackageProductDependency', package=phosphor_package, productName='PhosphorSwift'),
 }
@@ -163,30 +157,20 @@ def dependency(name, target):
 
 for name, sources, res, kind, settings in [
     ('MyResearch', core+translation+app+shared, resources, 'com.apple.product-type.application', {'PRODUCT_BUNDLE_IDENTIFIER':'com.dandibbert.MyResearch','CODE_SIGN_ENTITLEMENTS':'Resources/Shared.entitlements','INFOPLIST_FILE':'Resources/App-Info.plist','ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon','LD_RUNPATH_SEARCH_PATHS':['$(inherited)','@executable_path/Frameworks']}),
-    ('MyResearchShare', core+translation+share+shared+['App/Visuals.swift','App/SearchField.swift','App/Suggestions.swift','App/LanguageRouting.swift','App/TranslationScreen.swift'], ['Resources/PrivacyInfo.xcprivacy','Share/Selection.js'], 'com.apple.product-type.app-extension', {'PRODUCT_BUNDLE_IDENTIFIER':'com.dandibbert.MyResearch.Share','CODE_SIGN_ENTITLEMENTS':'Resources/Shared.entitlements','INFOPLIST_FILE':'Resources/Share-Info.plist','APPLICATION_EXTENSION_API_ONLY':'YES','SKIP_INSTALL':'YES','LD_RUNPATH_SEARCH_PATHS':['$(inherited)','@executable_path/Frameworks','@executable_path/../../Frameworks']}),
+    ('MyResearchShare', core+translation+share+shared+['App/Visuals.swift','App/SearchField.swift','App/Suggestions.swift','App/LanguageRouting.swift','App/TranslationScreen.swift'], ['Resources/Assets.xcassets','Resources/PrivacyInfo.xcprivacy','Share/Selection.js'], 'com.apple.product-type.app-extension', {'PRODUCT_BUNDLE_IDENTIFIER':'com.dandibbert.MyResearch.Share','CODE_SIGN_ENTITLEMENTS':'Resources/Shared.entitlements','INFOPLIST_FILE':'Resources/Share-Info.plist','APPLICATION_EXTENSION_API_ONLY':'YES','SKIP_INSTALL':'YES','LD_RUNPATH_SEARCH_PATHS':['$(inherited)','@executable_path/Frameworks','@executable_path/../../Frameworks']}),
     ('MyResearchShareProbe', probe, [], 'com.apple.product-type.application', {'PRODUCT_BUNDLE_IDENTIFIER':'com.dandibbert.MyResearch.ShareProbe','INFOPLIST_FILE':'Resources/Probe-Info.plist'}),
     ('MyResearchUITests', tests, [], 'com.apple.product-type.bundle.ui-testing', {'PRODUCT_BUNDLE_IDENTIFIER':'com.dandibbert.MyResearch.UITests','GENERATE_INFOPLIST_FILE':'YES','TEST_TARGET_NAME':'MyResearch'}),
 ]:
-    package_dependencies=[]
-    framework_files=[]
-    if name in phosphor_products:
-        package_product=phosphor_products[name]
-        package_dependencies=[package_product]
-        framework_files=[obj('buildfile:'+name+':PhosphorSwift', isa='PBXBuildFile', productRef=package_product)]
-    phases=[
-        phase(name+':sources','PBXSourcesBuildPhase',sources),
-        obj('phase:'+name+':frameworks', isa='PBXFrameworksBuildPhase', buildActionMask='2147483647', files=framework_files, runOnlyForDeploymentPostprocessing='0'),
-        phase(name+':resources','PBXResourcesBuildPhase',res)
-    ]
+    phases=[phase(name+':sources','PBXSourcesBuildPhase',sources),phase(name+':frameworks','PBXFrameworksBuildPhase',[]),phase(name+':resources','PBXResourcesBuildPhase',res)]
     dependencies=[]
     if name=='MyResearch':
         embed=obj('embed:share', isa='PBXBuildFile', fileRef=products['MyResearchShare'], settings={'ATTRIBUTES':['RemoveHeadersOnCopy']})
         phases.append(obj('phase:embed', isa='PBXCopyFilesBuildPhase', buildActionMask='2147483647', dstPath='', dstSubfolderSpec='13', files=[embed], name='Embed App Extensions', runOnlyForDeploymentPostprocessing='0'))
         dependencies=[dependency('app-share','MyResearchShare')]
     elif name=='MyResearchUITests': dependencies=[dependency('tests-app','MyResearch'), dependency('tests-probe','MyResearchShareProbe')]
-    obj('target:'+name, isa='PBXNativeTarget', buildConfigurationList=configurations(name,settings), buildPhases=phases, buildRules=[], dependencies=dependencies, packageProductDependencies=package_dependencies, name=name, productName=name, productReference=products[name], productType=kind)
+    obj('target:'+name, isa='PBXNativeTarget', buildConfigurationList=configurations(name,settings), buildPhases=phases, buildRules=[], dependencies=dependencies, name=name, productName=name, productReference=products[name], productType=kind)
 
-obj('project', isa='PBXProject', attributes={'BuildIndependentTargetsInParallel':'YES','LastUpgradeCheck':'1640','TargetAttributes':{uid('target:MyResearchUITests'):{'TestTargetID':uid('target:MyResearch')}}}, buildConfigurationList=configurations('project',{}), compatibilityVersion='Xcode 14.0', developmentRegion='zh-Hans', hasScannedForEncodings='0', knownRegions=['zh-Hans','en','Base'], mainGroup=main_group, packageReferences=[phosphor_package], productRefGroup=uid('group:products'), projectDirPath='', projectRoot='', targets=[uid('target:'+n) for n in products])
+obj('project', isa='PBXProject', attributes={'BuildIndependentTargetsInParallel':'YES','LastUpgradeCheck':'1640','TargetAttributes':{uid('target:MyResearchUITests'):{'TestTargetID':uid('target:MyResearch')}}}, buildConfigurationList=configurations('project',{}), compatibilityVersion='Xcode 14.0', developmentRegion='zh-Hans', hasScannedForEncodings='0', knownRegions=['zh-Hans','en','Base'], mainGroup=main_group, productRefGroup=uid('group:products'), projectDirPath='', projectRoot='', targets=[uid('target:'+n) for n in products])
 project=pathlib.Path('MyResearch.xcodeproj')
 project.mkdir(exist_ok=True)
 (project/'project.pbxproj').write_text('// !$*UTF8*$!\n'+emit({'archiveVersion':'1','classes':{},'objectVersion':'56','objects':objects,'rootObject':uid('project')})+'\n')

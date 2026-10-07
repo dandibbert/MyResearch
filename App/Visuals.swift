@@ -1,6 +1,5 @@
 import SwiftUI
 import UIKit
-import PhosphorSwift
 
 enum ResearchStyle {
     static let accent = Color(hex: "5265DE")
@@ -24,11 +23,12 @@ struct IconGlyph: View {
 
     var body: some View {
         Group {
-            if storedValue.hasPrefix("ph:"),
-               let icon = Ph(rawValue: String(storedValue.dropFirst(3))) {
-                icon.bold
-                    .color(Color(hex: tintHex))
+            if storedValue.hasPrefix("ph:") {
+                Image("ph-\(String(storedValue.dropFirst(3)))-bold")
+                    .renderingMode(.template)
+                    .resizable()
                     .aspectRatio(contentMode: .fit)
+                    .foregroundStyle(Color(hex: tintHex))
             } else {
                 Image(systemName: UIImage(systemName: storedValue) == nil ? "magnifyingglass" : storedValue)
                     .font(.system(size: size * 0.72, weight: .semibold))
