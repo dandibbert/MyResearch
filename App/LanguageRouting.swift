@@ -99,7 +99,15 @@ enum TranslationLanguageRouter {
         guard let language = recognizer.dominantLanguage else { return nil }
         let hypotheses = recognizer.languageHypotheses(withMaximum: 1)
         guard (hypotheses[language] ?? 0) >= 0.35 else { return nil }
-        return language.rawValue
+        return canonical(language.rawValue)
+    }
+
+    static func canonical(_ code: String) -> String {
+        switch code.lowercased() {
+        case "zh", "zh-hans": return "zh"
+        case "zh-hant": return "zh-Hant"
+        default: return code
+        }
     }
 
     static func displayName(_ code: String) -> String {
