@@ -13,7 +13,7 @@ jobs:
   build:
     name: Test core and build unsigned device IPA
     runs-on: macos-15
-    timeout-minutes: 20
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
       - name: Select Xcode 16.4
@@ -55,7 +55,7 @@ jobs:
   ui:
     name: Simulator interaction tests
     runs-on: macos-15
-    timeout-minutes: 20
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - name: Select Xcode and generate project
@@ -82,7 +82,7 @@ jobs:
           xcrun simctl ui "$DEVICE" appearance light
           xcrun simctl status_bar "$DEVICE" override --time '9:41' --batteryState charged --batteryLevel 100
       - name: Build and launch simulator app independently
-        timeout-minutes: 6
+        timeout-minutes: 15
         run: |
           set -o pipefail
           xcodebuild build -project MyResearch.xcodeproj -scheme MyResearch \
@@ -109,7 +109,7 @@ jobs:
           if-no-files-found: error
           retention-days: 14
       - name: Run native UI tests
-        timeout-minutes: 12
+        timeout-minutes: 15
         run: |
           set -o pipefail
           xcodebuild build-for-testing -project MyResearch.xcodeproj -scheme MyResearch \
