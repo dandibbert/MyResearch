@@ -461,174 +461,376 @@ struct TargetEditor: View {
     private var translatorSections: some View {
         Section {
             Picker("协议", selection: translationBinding(\.engine)) {
-                ForEach(TranslationEngineKind.allCases) { engine in Text(engine.title).tag(engine) }
+                Text("AI 模型").tag(TranslationEngineKind.openAIChat)
+                Text("HTTP API").tag(TranslationEngineKind.http)
             }
+            .pickerStyle(.segmented)
 
-            HStack(spacing: 9) {
+            HStack(spacing: 10) {
                 Image(systemName: translatorDraft.engine == .openAIChat ? "sparkles" : "network")
                     .foregroundStyle(ResearchStyle.accent)
-                    .frame(width: 30, height: 30)
-                    .background(ResearchStyle.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 9))
+                    .frame(width: 34, height: 34)
+                    .background(ResearchStyle.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 10))
                 VStack(alignment: .leading, spacing: 2) {
-                    Text(translatorDraft.engine == .openAIChat ? "AI 翻译" : "HTTP 翻译")
+                    Text(translatorDraft.engine == .openAIChat ? "OpenAI-compatible" : "通用 HTTP")
                         .font(.subheadline.weight(.semibold))
                     Text(translatorDraft.engine == .openAIChat
-                         ? "适合 OpenAI-compatible 模型，支持 SSE 流式输出"
-                         : "适合 Google GTX、DeepLX、DeepL、Microsoft 等 REST 接口")
+                         ? "填服务地址与 Key，模型可以直接拉取选择"
+                         : "适合 DeepLX、DeepL、Microsoft 及自定义 REST 接口")
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
             }
         } header: {
-            Text("引擎")
+            Text("翻译引擎")
         }
 
         if translatorDraft.engine == .openAIChat {
             Section {
-                TextField("Base URL，例如 https://api.openai.com", text: openAIBinding(\.baseURL))
-                    .textInputAutocapitalization(.never).autocorrectionDisabled()
-                TextField("Model", text: openAIBinding(\.model))
-                    .textInputAutocapitalization(.never).autocorrectionDisabled()
+                TextField("Base URL", text: openAIBinding(\.baseURL))
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+
+                if translatorDraft.credentialID != nil {
+                    SecureField(
+                        credentialPresent ? "API Key（留空保持已保存值）" : "API Key",
+                        text: $apiKey
+                    )
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                }
+
+                HStack(spacing: 8) {
+                    Image(systemName: credentialPresent ? "checkmark.shield.fill" : "key")
+                        .foregroundStyle(credentialPresent ? Color.green : Color.secondary)
+                    Text(
+                        translatorDraft.credentialID == nil
+                            ? "当前配置不使用 Key"
+                            : (credentialPresent ? "钥匙串中已有 Key" : (apiKey.isEmpty ? "还没有 Key" : "将保存新 Key"))
+                    )
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                }
             } header: {
                 Text("连接")
+            } footer: {
+                Text("兼容标准 OpenAI /v1/chat/completions。Base URL 可以填到域名、/v1，或完整 chat/completions 地址。")
             }
 
             Section {
-                DisclosureGroup("Prompt 与参数") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        CursorTemplateEditor(
-                            text: openAIBinding(\.systemPrompt),
-                            selection: $promptSelection,
-                            placeholder: "Translate from {from} to {to}…",
-                            identifier: "translator-system-prompt"
-                        )
-                        HStack {
-                            Button("{from}") { insert("{from}", into: openAIBinding(\.systemPrompt), selection: $promptSelection) }
-                            Button("{to}") { insert("{to}", into: openAIBinding(\.systemPrompt), selection: $promptSelection) }
-                            Button("{text}") { insert("{text}", into: openAIBinding(\.systemPrompt), selection: $promptSelection) }
-                        }
+                HStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("模型")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        Text((translatorDraft.openAI?.model ?? "").isEmpty ? "尚未选择" : (translatorDraft.openAI?.model ?? ""))
+                            .font(.system(.body, design: .monospaced))
+                            .foregroundStyle((translatorDraft.openAI?.model ?? "").isEmpty ? Color.secondary : Color.primary)
+                            .lineLimit(1)
+                    }
+                    Spacer()
+                    if modelLoading {
+                        ProgressView().controlSize(.small)
+                    }
+                }
+
+                Button {
+                    fetchModels()
+                } label: {
+                    Label(modelCatalog.isEmpty ? "获取模型列表" : "重新获取模型", systemImage: "arrow.triangle.2.circlepath")
+                }
+                .disabled(modelLoading)
+
+                if !modelCatalog.isEmpty {
+                    Button {
+                        showModelPicker = true
+                    } label: {
+                        Label("从 \(modelCatalog.count) 个模型中选择", systemImage: "list.bullet")
+                    }
+                }
+
+                if let modelFetchError {
+                    Label(modelFetchError, systemImage: "exclamationmark.triangle")
                         .font(.caption)
+                        .foregroundStyle(.orange)
+                        .textSelection(.enabled)
+                }
+            } header: {
+                Text("模型")
+            } footer: {
+                Text("通过标准 /v1/models 拉取。接口不支持模型列表时，仍可在下方高级设置中手动填写。")
+            }
+
+            Section {
+                Toggle("启用来源", isOn: $draft.enabled)
+                Toggle("自动运行", isOn: translationBinding(\.autoRun))
+            } header: {
+                Text("运行")
+            } footer: {
+                Text(translatorDraft.autoRun ? "打开翻译结果页后会自动运行这个引擎。" : "只有点中这个引擎、快捷按钮，或手动运行时才请求。")
+            }
+
+            Section {
+                DisclosureGroup("高级设置") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("手动模型名")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            TextField("例如 gpt-5.6-luna", text: openAIBinding(\.model))
+                                .font(.system(.subheadline, design: .monospaced))
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                        }
+
+                        Divider()
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Credential ID")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            TextField("translator.\(draft.id)", text: Binding(
+                                get: { translatorDraft.credentialID ?? "" },
+                                set: { translatorDraft.credentialID = $0.isEmpty ? nil : $0 }
+                            ))
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                        }
+
+                        Divider()
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Extra Headers JSON")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            CursorTemplateEditor(
+                                text: $openAIHeadersText,
+                                selection: $httpHeadersSelection,
+                                placeholder: #"{"X-Provider":"value"}"#,
+                                identifier: "translator-openai-headers"
+                            )
+                            Button("{credential}") {
+                                insert("{credential}", into: $openAIHeadersText, selection: $httpHeadersSelection)
+                            }
+                            .font(.caption)
+                        }
+
+                        Divider()
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("System Prompt")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            CursorTemplateEditor(
+                                text: openAIBinding(\.systemPrompt),
+                                selection: $promptSelection,
+                                placeholder: "Translate from {from} to {to}…",
+                                identifier: "translator-system-prompt"
+                            )
+                            HStack {
+                                Button("{from}") { insert("{from}", into: openAIBinding(\.systemPrompt), selection: $promptSelection) }
+                                Button("{to}") { insert("{to}", into: openAIBinding(\.systemPrompt), selection: $promptSelection) }
+                                Button("{text}") { insert("{text}", into: openAIBinding(\.systemPrompt), selection: $promptSelection) }
+                            }
+                            .font(.caption)
+                        }
 
                         HStack {
                             Text("Temperature")
                             Slider(value: openAITemperature, in: 0...2, step: 0.1)
                             Text(openAITemperature.wrappedValue.formatted(.number.precision(.fractionLength(1))))
-                                .font(.caption.monospacedDigit()).frame(width: 30)
+                                .font(.caption.monospacedDigit())
+                                .frame(width: 30)
+                        }
+
+                        if credentialPresent {
+                            Button("删除已保存 Key", role: .destructive) {
+                                guard let id = translatorDraft.credentialID else { return }
+                                do {
+                                    try SharedCredentialStore.delete(id)
+                                    credentialPresent = false
+                                    apiKey = ""
+                                } catch {
+                                    saveError = error.localizedDescription
+                                }
+                            }
                         }
                     }
                     .padding(.top, 8)
                 }
-            } header: {
-                Text("高级")
+            } footer: {
+                Text("这些选项通常不需要改。Credential ID、额外 Header、Prompt 与 Temperature 都收在这里。")
             }
         } else {
             Section {
                 Picker("Method", selection: httpBinding(\.method)) {
-                    ForEach(["GET", "POST", "PUT", "PATCH", "DELETE"], id: \.self) { Text($0).tag($0) }
+                    ForEach(["GET", "POST", "PUT", "PATCH"], id: \.self) { Text($0).tag($0) }
                 }
 
-                Text("URL 模板").font(.caption).foregroundStyle(.secondary)
+                Text("Endpoint")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
                 CursorTemplateEditor(
                     text: httpBinding(\.url),
                     selection: $httpURLSelection,
-                    placeholder: "https://example.com/translate?text={text}&from={from}&to={to}",
+                    placeholder: "https://example.com/translate",
                     identifier: "translator-http-url"
                 )
-                tokenButtons(text: httpBinding(\.url), selection: $httpURLSelection, includeCredential: true)
+
+                if translatorDraft.credentialID != nil {
+                    SecureField(
+                        credentialPresent ? "API Key（留空保持已保存值）" : "API Key",
+                        text: $apiKey
+                    )
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                }
             } header: {
                 Text("连接")
+            } footer: {
+                Text("普通 REST 翻译接口只需要先填 Endpoint；复杂 Header、Body 和响应路径放在高级设置里。")
             }
 
             Section {
-                TextField("JSON Path；支持 [*]，留空则使用整个响应正文", text: httpBinding(\.responseJSONPath))
-                    .font(.system(.subheadline, design: .monospaced))
-                    .textInputAutocapitalization(.never).autocorrectionDisabled()
+                Toggle("启用来源", isOn: $draft.enabled)
+                Toggle("自动运行", isOn: translationBinding(\.autoRun))
+            } header: {
+                Text("运行")
+            }
 
-                DisclosureGroup("Headers 与 Body") {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Headers JSON").font(.caption).foregroundStyle(.secondary)
-                        CursorTemplateEditor(
-                            text: $httpHeadersText,
-                            selection: $httpHeadersSelection,
-                            placeholder: #"{"Authorization":"Bearer {credential}"}"#,
-                            identifier: "translator-http-headers"
-                        )
-                        tokenButtons(text: $httpHeadersText, selection: $httpHeadersSelection, includeCredential: true)
+            Section {
+                DisclosureGroup("高级 HTTP 设置") {
+                    VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Credential ID")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            TextField("可选", text: Binding(
+                                get: { translatorDraft.credentialID ?? "" },
+                                set: { translatorDraft.credentialID = $0.isEmpty ? nil : $0 }
+                            ))
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                        }
+
+                        Divider()
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("URL 模板")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            CursorTemplateEditor(
+                                text: httpBinding(\.url),
+                                selection: $httpURLSelection,
+                                placeholder: "https://example.com/translate?text={text}&from={from}&to={to}",
+                                identifier: "translator-http-url-advanced"
+                            )
+                            tokenButtons(text: httpBinding(\.url), selection: $httpURLSelection, includeCredential: true)
+                        }
+
+                        Divider()
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("Headers JSON")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            CursorTemplateEditor(
+                                text: $httpHeadersText,
+                                selection: $httpHeadersSelection,
+                                placeholder: #"{"Authorization":"Bearer {credential}"}"#,
+                                identifier: "translator-http-headers"
+                            )
+                            tokenButtons(text: $httpHeadersText, selection: $httpHeadersSelection, includeCredential: true)
+                        }
 
                         Picker("Body", selection: httpBinding(\.bodyEncoding)) {
-                            ForEach(HTTPBodyEncoding.allCases) { encoding in Text(encoding.rawValue.uppercased()).tag(encoding) }
+                            ForEach(HTTPBodyEncoding.allCases) { encoding in
+                                Text(encoding.rawValue.uppercased()).tag(encoding)
+                            }
                         }
 
                         if (translatorDraft.http ?? HTTPTranslationConfiguration()).bodyEncoding != .none {
-                            Text("Body 模板").font(.caption).foregroundStyle(.secondary)
-                            CursorTemplateEditor(
-                                text: httpBinding(\.bodyTemplate),
-                                selection: $bodySelection,
-                                placeholder: #"{"text":"{text}","source":"{from}","target":"{to}"}"#,
-                                identifier: "translator-http-body"
-                            )
-                            tokenButtons(text: httpBinding(\.bodyTemplate), selection: $bodySelection, includeCredential: true)
+                            VStack(alignment: .leading, spacing: 6) {
+                                Text("Body 模板")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                CursorTemplateEditor(
+                                    text: httpBinding(\.bodyTemplate),
+                                    selection: $bodySelection,
+                                    placeholder: #"{"text":"{text}","source":"{from}","target":"{to}"}"#,
+                                    identifier: "translator-http-body"
+                                )
+                                tokenButtons(text: httpBinding(\.bodyTemplate), selection: $bodySelection, includeCredential: true)
+                            }
+                        }
+
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text("响应 JSON Path")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                            TextField("例如 $.data.translation；留空用整个正文", text: httpBinding(\.responseJSONPath))
+                                .font(.system(.subheadline, design: .monospaced))
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                        }
+
+                        if credentialPresent {
+                            Button("删除已保存 Key", role: .destructive) {
+                                guard let id = translatorDraft.credentialID else { return }
+                                do {
+                                    try SharedCredentialStore.delete(id)
+                                    credentialPresent = false
+                                    apiKey = ""
+                                } catch {
+                                    saveError = error.localizedDescription
+                                }
+                            }
                         }
                     }
                     .padding(.top, 8)
                 }
-            } header: {
-                Text("响应与高级请求")
             } footer: {
-                Text("占位符支持 {text}、{from}、{to}、{credential}；JSON Path 支持对象字段、数组索引和 [*] 通配数组。")
+                Text("支持 {text}、{from}、{to}、{credential}；JSON Path 支持字段、数组索引与 [*]。预设来源通常不需要改这里。")
             }
         }
+    }
 
-        Section {
-            HStack {
-                Label(
-                    translatorDraft.credentialID == nil ? "此引擎无需 API Key" : (credentialPresent ? "已保存 API Key" : "尚未保存 API Key"),
-                    systemImage: translatorDraft.credentialID == nil ? "lock.open" : (credentialPresent ? "checkmark.shield.fill" : "key")
-                )
-                .foregroundStyle(credentialPresent ? Color.green : Color.secondary)
-                Spacer()
-            }
+    private func fetchModels() {
+        modelLoading = true
+        modelFetchError = nil
 
-            TextField("Credential ID", text: Binding(
-                get: { translatorDraft.credentialID ?? "" },
-                set: { translatorDraft.credentialID = $0.isEmpty ? nil : $0 }
-            ))
-            .textInputAutocapitalization(.never).autocorrectionDisabled()
-
-            if translatorDraft.credentialID != nil {
-                SecureField(credentialPresent ? "新 API Key（留空保持原值）" : "API Key", text: $apiKey)
-                    .textInputAutocapitalization(.never).autocorrectionDisabled()
-            }
-
-            if credentialPresent {
-                Button("删除已保存 Key", role: .destructive) {
-                    guard let id = translatorDraft.credentialID else { return }
-                    do {
-                        try SharedCredentialStore.delete(id)
-                        credentialPresent = false
-                        apiKey = ""
-                    } catch {
-                        saveError = error.localizedDescription
-                    }
+        Task { @MainActor in
+            do {
+                let credential: String
+                if !apiKey.isEmpty {
+                    credential = apiKey
+                } else if let id = translatorDraft.credentialID {
+                    credential = try SharedCredentialStore.value(for: id) ?? ""
+                } else {
+                    credential = ""
                 }
-            }
-        } header: {
-            Text("凭据")
-        } footer: {
-            Text("Key 只进共享钥匙串，导出的 JSON 只带 Credential ID；分享扩展可读取同一份 Key。")
-        }
 
-        Section {
-            Toggle("启用来源", isOn: $draft.enabled)
-            Toggle("自动运行", isOn: translationBinding(\.autoRun))
-            Label(
-                translatorDraft.autoRun ? "进入翻译页会自动请求这个引擎" : "只在点这个来源或手动运行时请求",
-                systemImage: translatorDraft.autoRun ? "bolt.fill" : "hand.tap"
-            )
-            .font(.caption)
-            .foregroundStyle(.secondary)
-        } header: {
-            Text("运行")
+                let config = translatorDraft.openAI ?? OpenAIChatConfiguration()
+                let headers = Self.decodeHeaders(openAIHeadersText) ?? [:]
+                let models = try await OpenAIModelCatalog.fetch(
+                    baseURL: config.baseURL,
+                    credential: credential,
+                    extraHeaders: headers
+                )
+                modelCatalog = models
+                modelLoading = false
+
+                if models.count == 1, (translatorDraft.openAI?.model ?? "").isEmpty {
+                    var next = translatorDraft.openAI ?? OpenAIChatConfiguration()
+                    next.model = models[0]
+                    translatorDraft.openAI = next
+                } else {
+                    showModelPicker = true
+                }
+            } catch {
+                modelLoading = false
+                modelFetchError = error.localizedDescription
+            }
         }
     }
 
