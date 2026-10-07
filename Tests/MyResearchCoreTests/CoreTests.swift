@@ -1,4 +1,5 @@
 import XCTest
+import TranslationCore
 @testable import MyResearchCore
 
 final class CoreTests: XCTestCase {
@@ -73,7 +74,7 @@ final class CoreTests: XCTestCase {
     }
     func testInvalidVersionAndOversizeRejected() {
         var config = Configuration.initial
-        config.schemaVersion = 2
+        config.schemaVersion = 3
         XCTAssertThrowsError(try ConfigurationCodec.validate(config))
         XCTAssertThrowsError(try ConfigurationCodec.decode(Data(repeating: 1, count: 2_000_001)))
         XCTAssertThrowsError(try ConfigurationCodec.decode(Data("{}".utf8)))
@@ -118,8 +119,55 @@ final class CoreTests: XCTestCase {
         }
         """
         let config = try ConfigurationCodec.decode(Data(legacy.utf8))
+        XCTAssertEqual(config.schemaVersion, 2)
+        XCTAssertEqual(config.targets[0].kind, .link)
         XCTAssertTrue(config.settings.usesInAppSafari)
         XCTAssertFalse(config.targets[0].usesInAppSafari)
         XCTAssertEqual(config.quickTargets.map(\.id), ["google"])
     }
+    func testTranslatorSourceRoundtripAndTrigger() throws {
+        let translatorID = "translator-test"
+        let translator = TranslationConfiguration(
+            engine: .http,
+            openAI: nil,
+            http: HTTPTranslationConfiguration(
+                method: "POST",
+                url: "https://example.com/translate",
+                headers: ["Authorization": "Bearer {credential}"],
+                bodyEncoding: .json,
+                bodyTemplate: #"{"text":"{text}","source":"{from}","target":"{to}"}"#,
+                responseJSONPath: "$.translation"
+            ),
+            credentialID: "translator.test",
+            autoRun: true
+        )
+        var config = Configuration.initial
+        config.targets.append(SearchTarget(
+            id: translatorID,
+            name: "Test Translator",
+            symbol: "character.book.closed.fill",
+            template: "",
+            aliases: ["tr"],
+            kind: .translator,
+            translator: translator
+        ))
+        let decoded = try ConfigurationCodec.decode(ConfigurationCodec.encode(config))
+        XCTAssertEqual(decoded.schemaVersion, 2)
+        XCTAssertEqual(decoded.enabledTranslators.map(\.id), [translatorID])
+        XCTAssertEqual(decoded.defaultTarget?.id, "google")
+        XCTAssertEqual(SearchRouter.intent(for: "tr hello", configuration: decoded).targetID, translatorID)
+    }
+
+    func testTextInsertionUsesCaretAndUTF16Selection() {
+        let caret = TextInsertion.inserting("{query}", into: "https://x.test?q=&lang=zh", selection: NSRange(location: 17, length: 0))
+        XCTAssertEqual(caret.text, "https://x.test?q={query}&lang=zh")
+        XCTAssertEqual(caret.selection.location, 24)
+
+        let source = "猫🐈dog" as NSString
+        let catRange = source.range(of: "🐈")
+        let replaced = TextInsertion.inserting("{query}", into: source as String, selection: catRange)
+        XCTAssertEqual(replaced.text, "猫{query}dog")
+        XCTAssertEqual(replaced.selection.location, 8)
+    }
+
 }

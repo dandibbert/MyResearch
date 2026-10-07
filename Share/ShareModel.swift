@@ -17,6 +17,7 @@ final class ShareModel: ObservableObject {
     @Published var loading = true
     @Published var opening = false
     @Published var browser: BrowserDestination?
+    @Published var translationDestination: TranslationDestination?
     @Published var failedURL: URL?
     @Published var failedWebURL: URL?
     @Published var compatibility = UserDefaults.standard.object(forKey: "compatibility-opening") as? Bool ?? true {
@@ -62,7 +63,13 @@ final class ShareModel: ObservableObject {
     func cancel() { openingTask?.cancel(); openingTask = nil }
     func search(_ text: String, target: SearchTarget?) {
         guard !opening else { return }
-        guard let target else { error = "没有启用的搜索来源，可在主 App 中添加。"; return }
+        guard let target else { error = "没有启用的来源，可在主 App 中添加。"; return }
+        if target.kind == .translator {
+            let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !value.isEmpty else { error = "先输入要翻译的内容。"; return }
+            translationDestination = TranslationDestination(text: value, preferredTargetID: target.id)
+            return
+        }
         do {
             let primary = try TemplateEngine.url(template: target.template, query: text)
             let fallback = target.fallbackTemplate.isEmpty ? nil : try TemplateEngine.url(template: target.fallbackTemplate, query: text)

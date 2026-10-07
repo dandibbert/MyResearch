@@ -36,7 +36,7 @@ def write_plist(path, value):
 common_info = {
     'CFBundleDevelopmentRegion': 'zh_CN', 'CFBundleExecutable': '$(EXECUTABLE_NAME)',
     'CFBundleIdentifier': '$(PRODUCT_BUNDLE_IDENTIFIER)', 'CFBundleInfoDictionaryVersion': '6.0',
-    'CFBundleName': '$(PRODUCT_NAME)', 'CFBundleShortVersionString': '1.2.1',
+    'CFBundleName': '$(PRODUCT_NAME)', 'CFBundleShortVersionString': '1.3.0',
     'CFBundleVersion': '$(CURRENT_PROJECT_VERSION)', 'LSRequiresIPhoneOS': True,
 }
 write_plist('Resources/App-Info.plist', dict(common_info, **{
@@ -99,13 +99,14 @@ def icon():
 
 icon()
 core = sorted(str(p) for p in pathlib.Path('Core').glob('*.swift'))
+translation = sorted(str(p) for p in pathlib.Path('TranslationCore').glob('*.swift'))
 app = sorted(str(p) for p in pathlib.Path('App').glob('*.swift'))
 share = sorted(str(p) for p in pathlib.Path('Share').glob('*.swift'))
 shared = sorted(str(p) for p in pathlib.Path('Shared').glob('*.swift'))
 probe = sorted(str(p) for p in pathlib.Path('ShareProbe').glob('*.swift'))
 tests = sorted(str(p) for p in pathlib.Path('UITests').glob('*.swift'))
 resources = ['Resources/Assets.xcassets', 'Resources/PrivacyInfo.xcprivacy']
-all_paths = sorted(set(core+app+share+shared+probe+tests+resources+["Share/Selection.js"]))
+all_paths = sorted(set(core+translation+app+share+shared+probe+tests+resources+["Share/Selection.js"]))
 refs = {}
 for path in all_paths:
     kind = 'sourcecode.swift' if path.endswith('.swift') else ('folder.assetcatalog' if path.endswith('.xcassets') else ('sourcecode.javascript' if path.endswith('.js') else 'text.xml'))
@@ -117,7 +118,7 @@ products = {
     'MyResearchUITests': obj('product:tests', isa='PBXFileReference', explicitFileType='wrapper.cfbundle', path='MyResearchUITests.xctest', sourceTree='BUILT_PRODUCTS_DIR'),
 }
 groups = []
-for name, paths in [('App',app),('Core',core),('Share',share+['Share/Selection.js']),('Shared',shared),('ShareProbe',probe),('UITests',tests),('Resources',resources)]:
+for name, paths in [('App',app),('Core',core),('TranslationCore',translation),('Share',share+['Share/Selection.js']),('Shared',shared),('ShareProbe',probe),('UITests',tests),('Resources',resources)]:
     groups.append(obj('group:'+name, isa='PBXGroup', children=[refs[p] for p in paths], name=name, sourceTree='<group>'))
 groups.append(obj('group:products', isa='PBXGroup', children=list(products.values()), name='Products', sourceTree='<group>'))
 main_group = obj('group:root', isa='PBXGroup', children=groups, sourceTree='<group>')
@@ -125,7 +126,7 @@ common_settings = {
     'SDKROOT': 'iphoneos', 'IPHONEOS_DEPLOYMENT_TARGET': '17.0', 'SWIFT_VERSION': '5.0',
     'CLANG_ENABLE_MODULES': 'YES', 'CLANG_ENABLE_OBJC_ARC': 'YES', 'SWIFT_STRICT_CONCURRENCY': 'minimal',
     'ENABLE_USER_SCRIPT_SANDBOXING': 'YES', 'TARGETED_DEVICE_FAMILY': '1,2', 'CODE_SIGN_STYLE': 'Automatic',
-    'MARKETING_VERSION': '1.2.1', 'CURRENT_PROJECT_VERSION': os.environ.get('GITHUB_RUN_NUMBER','1'),
+    'MARKETING_VERSION': '1.3.0', 'CURRENT_PROJECT_VERSION': os.environ.get('GITHUB_RUN_NUMBER','1'),
     'PRODUCT_NAME': '$(TARGET_NAME)', 'SWIFT_EMIT_LOC_STRINGS': 'NO',
 }
 
@@ -150,8 +151,8 @@ def dependency(name, target):
     return obj('dependency:'+name, isa='PBXTargetDependency', target=uid('target:'+target), targetProxy=proxy)
 
 for name, sources, res, kind, settings in [
-    ('MyResearch', core+app+shared, resources, 'com.apple.product-type.application', {'PRODUCT_BUNDLE_IDENTIFIER':'com.dandibbert.MyResearch','CODE_SIGN_ENTITLEMENTS':'Resources/Shared.entitlements','INFOPLIST_FILE':'Resources/App-Info.plist','ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon','LD_RUNPATH_SEARCH_PATHS':['$(inherited)','@executable_path/Frameworks']}),
-    ('MyResearchShare', core+share+shared+['App/Visuals.swift','App/SearchField.swift','App/Suggestions.swift'], ['Resources/PrivacyInfo.xcprivacy','Share/Selection.js'], 'com.apple.product-type.app-extension', {'PRODUCT_BUNDLE_IDENTIFIER':'com.dandibbert.MyResearch.Share','CODE_SIGN_ENTITLEMENTS':'Resources/Shared.entitlements','INFOPLIST_FILE':'Resources/Share-Info.plist','APPLICATION_EXTENSION_API_ONLY':'YES','SKIP_INSTALL':'YES','LD_RUNPATH_SEARCH_PATHS':['$(inherited)','@executable_path/Frameworks','@executable_path/../../Frameworks']}),
+    ('MyResearch', core+translation+app+shared, resources, 'com.apple.product-type.application', {'PRODUCT_BUNDLE_IDENTIFIER':'com.dandibbert.MyResearch','CODE_SIGN_ENTITLEMENTS':'Resources/Shared.entitlements','INFOPLIST_FILE':'Resources/App-Info.plist','ASSETCATALOG_COMPILER_APPICON_NAME':'AppIcon','LD_RUNPATH_SEARCH_PATHS':['$(inherited)','@executable_path/Frameworks']}),
+    ('MyResearchShare', core+translation+share+shared+['App/Visuals.swift','App/SearchField.swift','App/Suggestions.swift','App/LanguageRouting.swift','App/TranslationScreen.swift'], ['Resources/PrivacyInfo.xcprivacy','Share/Selection.js'], 'com.apple.product-type.app-extension', {'PRODUCT_BUNDLE_IDENTIFIER':'com.dandibbert.MyResearch.Share','CODE_SIGN_ENTITLEMENTS':'Resources/Shared.entitlements','INFOPLIST_FILE':'Resources/Share-Info.plist','APPLICATION_EXTENSION_API_ONLY':'YES','SKIP_INSTALL':'YES','LD_RUNPATH_SEARCH_PATHS':['$(inherited)','@executable_path/Frameworks','@executable_path/../../Frameworks']}),
     ('MyResearchShareProbe', probe, [], 'com.apple.product-type.application', {'PRODUCT_BUNDLE_IDENTIFIER':'com.dandibbert.MyResearch.ShareProbe','INFOPLIST_FILE':'Resources/Probe-Info.plist'}),
     ('MyResearchUITests', tests, [], 'com.apple.product-type.bundle.ui-testing', {'PRODUCT_BUNDLE_IDENTIFIER':'com.dandibbert.MyResearch.UITests','GENERATE_INFOPLIST_FILE':'YES','TEST_TARGET_NAME':'MyResearch'}),
 ]:
