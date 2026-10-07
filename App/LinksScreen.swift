@@ -621,7 +621,8 @@ struct TargetEditor: View {
             }
 
             Section {
-                DisclosureGroup("高级设置") {
+                DisclosureGroup {
+
                     VStack(alignment: .leading, spacing: 12) {
                         VStack(alignment: .leading, spacing: 6) {
                             Text("手动模型名")
@@ -707,8 +708,10 @@ struct TargetEditor: View {
                         }
                     }
                     .padding(.top, 8)
+                } label: {
+                    Text("高级设置")
+                        .accessibilityIdentifier("translator-advanced-settings-label")
                 }
-                .accessibilityIdentifier("translator-advanced-settings")
             } footer: {
                 Text("这些选项通常不需要改。Credential ID、额外 Header、Prompt 与 Temperature 都收在这里。")
             }
