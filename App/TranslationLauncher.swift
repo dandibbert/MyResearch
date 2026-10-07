@@ -96,6 +96,7 @@ struct TranslationLauncherView: View {
                     .background(ResearchStyle.accent, in: RoundedRectangle(cornerRadius: 15))
                 }
                 .buttonStyle(.plain)
+                .accessibilityIdentifier("translation-launch-confirm")
                 .disabled(targetLanguage == sourceLanguage)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 10)
@@ -228,6 +229,7 @@ struct TranslationLauncherView: View {
                             }
                     }
                     .buttonStyle(.plain)
+                    .accessibilityIdentifier("translation-pair-\(pair.source)-\(pair.target)")
                 }
             }
         }
