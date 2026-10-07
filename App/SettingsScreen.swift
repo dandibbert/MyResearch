@@ -73,7 +73,7 @@ struct SettingsScreen: View {
                         .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                 }
                 Section {
-                    LabeledContent("MyResearch", value: "1.3.0")
+                    LabeledContent("MyResearch", value: "1.3.1")
                     Text("打开就输入。原词始终在手边。")
                         .font(.footnote).foregroundStyle(.secondary)
                 }

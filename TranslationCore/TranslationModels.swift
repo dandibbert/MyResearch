@@ -81,6 +81,7 @@ public struct HTTPTranslationConfiguration: Codable, Equatable, Sendable {
     public var bodyEncoding: HTTPBodyEncoding
     public var bodyTemplate: String
     public var responseJSONPath: String
+    public var languageMap: [String: String]?
 
     public init(
         method: String = "POST",
@@ -88,7 +89,8 @@ public struct HTTPTranslationConfiguration: Codable, Equatable, Sendable {
         headers: [String: String] = [:],
         bodyEncoding: HTTPBodyEncoding = .json,
         bodyTemplate: String = #"{"text":"{text}","source":"{from}","target":"{to}"}"#,
-        responseJSONPath: String = "$.data.translation"
+        responseJSONPath: String = "$.data.translation",
+        languageMap: [String: String]? = nil
     ) {
         self.method = method
         self.url = url
@@ -96,6 +98,7 @@ public struct HTTPTranslationConfiguration: Codable, Equatable, Sendable {
         self.bodyEncoding = bodyEncoding
         self.bodyTemplate = bodyTemplate
         self.responseJSONPath = responseJSONPath
+        self.languageMap = languageMap
     }
 }
 

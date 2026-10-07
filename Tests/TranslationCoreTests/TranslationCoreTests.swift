@@ -36,10 +36,11 @@ final class TranslationCoreTests: XCTestCase {
         ))
     }
 
-    func testJSONPathSupportsObjectsAndArrayIndexes() throws {
-        let object = try JSONSerialization.jsonObject(with: Data(#"{"data":{"translations":[{"text":"hello"}]},"nested":[[["ok"]]]}"#.utf8))
+    func testJSONPathSupportsObjectsArrayIndexesAndWildcards() throws {
+        let object = try JSONSerialization.jsonObject(with: Data(#"{"data":{"translations":[{"text":"hello"}]},"nested":[[["ok"]]],"sentences":[{"trans":"你"},{"trans":"好"},{"trans":"！"}]}"#.utf8))
         XCTAssertEqual(try TranslationJSONPath.string(at: "$.data.translations[0].text", in: object), "hello")
         XCTAssertEqual(try TranslationJSONPath.string(at: "$.nested[0][0][0]", in: object), "ok")
+        XCTAssertEqual(try TranslationJSONPath.string(at: "$.sentences[*].trans", in: object), "你好！")
     }
 
     func testHTTPConfigurationValidation() throws {
@@ -52,11 +53,15 @@ final class TranslationCoreTests: XCTestCase {
                 headers: ["X-Key": "{credential}"],
                 bodyEncoding: .json,
                 bodyTemplate: #"{"q":"{text}","from":"{from}"}"#,
-                responseJSONPath: "$.result"
+                responseJSONPath: "$.result",
+                languageMap: ["zh": "zh-Hans"]
             ),
             credentialID: "translator.example"
         )
         XCTAssertNoThrow(try TranslationConfigurationValidator.validate(config))
+        XCTAssertEqual(config.http?.languageMap?["zh"], "zh-Hans")
+        let roundtrip = try JSONDecoder().decode(TranslationConfiguration.self, from: JSONEncoder().encode(config))
+        XCTAssertEqual(roundtrip.http?.languageMap?["zh"], "zh-Hans")
     }
 
     func testUnknownPlaceholderRejected() {

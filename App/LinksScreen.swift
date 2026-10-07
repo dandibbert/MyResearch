@@ -54,7 +54,7 @@ struct LinksScreen: View {
                             editing = SearchTarget(
                                 id: id,
                                 name: "翻译",
-                                symbol: "character.book.closed.fill",
+                                symbol: "ph:translate",
                                 tintHex: "5265DE",
                                 template: "",
                                 kind: .translator,
@@ -82,30 +82,84 @@ struct PresetPicker: View {
     @EnvironmentObject private var store: AppStore
     @Environment(\.dismiss) private var dismiss
     @State private var error: String?
+    @State private var category = 0
+
+    private var values: [SearchTarget] { category == 0 ? Presets.search : Presets.translation }
 
     var body: some View {
         NavigationStack {
             List {
                 Section {
-                    ForEach(Presets.all) { target in
+                    Picker("预设类型", selection: $category) {
+                        Text("搜索").tag(0)
+                        Text("翻译").tag(1)
+                    }
+                    .pickerStyle(.segmented)
+                    .listRowBackground(Color.clear)
+                    .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 8, trailing: 0))
+                }
+
+                Section {
+                    ForEach(values) { target in
                         let exists = store.configuration.targets.contains { $0.id == target.id }
                         Button {
                             do { try store.upsert(target) } catch { self.error = error.localizedDescription }
                         } label: {
-                            HStack {
-                                SourceRow(target: target)
-                                Image(systemName: exists ? "checkmark.circle.fill" : "plus.circle")
-                                    .foregroundStyle(exists ? Color.secondary : ResearchStyle.accent)
+                            VStack(alignment: .leading, spacing: 7) {
+                                HStack(spacing: 10) {
+                                    TargetIcon(target: target, size: 38)
+                                    VStack(alignment: .leading, spacing: 3) {
+                                        Text(target.name)
+                                            .font(.body.weight(.semibold))
+                                            .foregroundStyle(.primary)
+                                        Text(Presets.subtitle(for: target))
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                            .lineLimit(2)
+                                    }
+                                    Spacer()
+                                    Image(systemName: exists ? "checkmark.circle.fill" : "plus.circle.fill")
+                                        .font(.title3)
+                                        .foregroundStyle(exists ? Color.secondary : ResearchStyle.accent)
+                                }
+
+                                let badges = Presets.badges(for: target)
+                                if !badges.isEmpty {
+                                    HStack(spacing: 6) {
+                                        ForEach(badges, id: \.self) { badge in
+                                            Text(badge)
+                                                .font(.system(size: 10, weight: .semibold))
+                                                .foregroundStyle(Color(hex: target.tintHex))
+                                                .padding(.horizontal, 7)
+                                                .padding(.vertical, 3)
+                                                .background(Color(hex: target.tintHex).opacity(0.10), in: Capsule())
+                                        }
+                                    }
+                                    .padding(.leading, 48)
+                                }
                             }
+                            .padding(.vertical, 4)
+                            .contentShape(Rectangle())
                         }
                         .buttonStyle(.plain)
                         .disabled(exists)
                     }
+                } header: {
+                    Text(category == 0 ? "搜索来源" : "翻译来源")
                 } footer: {
-                    Text("预设均为可编辑搜索链接；翻译引擎请从右上角「+」单独添加。")
+                    if category == 1 {
+                        Text("Google GTX 是免 Key 的非官方接口，稳定性不由 Google 保证；DeepLX 需要填自己的实例地址；DeepL / Microsoft 需要 API Key；Kagi 会打开官方 Translate 网页并预填原文。")
+                    } else {
+                        Text("预设只是起点，添加后仍可修改图标、颜色、Trigger 和 URL。")
+                    }
                 }
-                if let error { Text(error).foregroundStyle(.red) }
+
+                if let error {
+                    Section { Text(error).foregroundStyle(.red) }
+                }
             }
+            .scrollContentBackground(.hidden)
+            .background(ResearchStyle.background)
             .navigationTitle("添加预设")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -123,6 +177,7 @@ struct TargetEditor: View {
     @State private var aliasText: String
     @State private var testQuery = "春莱布"
     @State private var saveError: String?
+    @State private var showIconPicker = false
 
     @State private var translatorDraft: TranslationConfiguration
     @State private var httpHeadersText: String
@@ -135,12 +190,7 @@ struct TargetEditor: View {
     @State private var bodySelection: NSRange
     @State private var promptSelection: NSRange
 
-    private let symbols = [
-        "magnifyingglass", "globe", "play.rectangle.fill", "book.closed.fill",
-        "character.book.closed.fill", "bag.fill", "map.fill", "text.bubble.fill",
-        "bolt.fill", "star.fill", "heart.fill", "terminal.fill", "link"
-    ]
-    private let colors = ["5265DE", "4285F4", "EB4B65", "E777A0", "148C95", "479E64", "EB7D32", "657083"]
+    private let colors = ["5265DE", "4285F4", "7C5CE7", "148C95", "479E64", "EB4B65", "E777A0", "EB7D32", "DA4B51", "657083", "0F2B46", "8A6D3B"]
 
     init(target: SearchTarget) {
         let translator = target.translator ?? .openAIDefault
@@ -244,31 +294,53 @@ struct TargetEditor: View {
                             if translatorDraft.credentialID == nil {
                                 translatorDraft.credentialID = "translator.\(draft.id)"
                             }
-                            draft.symbol = "character.book.closed.fill"
+                            draft.symbol = "ph:translate"
                         }
                     }
 
-                    Picker("图标", selection: $draft.symbol) {
-                        ForEach(Array(Set(symbols + [draft.symbol])).sorted(), id: \.self) { symbol in
-                            Label(symbol, systemImage: symbol).tag(symbol)
+                    Button { showIconPicker = true } label: {
+                        HStack {
+                            Text("图标").foregroundStyle(.primary)
+                            Spacer()
+                            TargetIcon(target: draft, size: 34)
+                            Text(IconCatalog.displayName(for: draft.symbol))
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundStyle(.tertiary)
                         }
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
 
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 0) {
-                            ForEach(colors, id: \.self) { color in
-                                Button { draft.tintHex = color } label: {
-                                    Circle().fill(Color(hex: color)).frame(width: 25, height: 25)
-                                        .overlay {
-                                            if draft.tintHex == color {
-                                                Image(systemName: "checkmark")
-                                                    .font(.caption.bold()).foregroundStyle(.white)
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("颜色").font(.caption).foregroundStyle(.secondary)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 6) {
+                                ForEach(colors, id: \.self) { color in
+                                    Button { draft.tintHex = color } label: {
+                                        Circle()
+                                            .fill(Color(hex: color))
+                                            .frame(width: 30, height: 30)
+                                            .overlay {
+                                                if draft.tintHex == color {
+                                                    Image(systemName: "checkmark")
+                                                        .font(.caption.bold())
+                                                        .foregroundStyle(.white)
+                                                }
                                             }
-                                        }
-                                        .frame(width: 44, height: 44)
+                                            .overlay {
+                                                Circle()
+                                                    .strokeBorder(Color.primary.opacity(draft.tintHex == color ? 0.18 : 0), lineWidth: 2)
+                                                    .padding(-3)
+                                            }
+                                            .frame(width: 44, height: 44)
+                                    }
+                                    .buttonStyle(.plain)
+                                    .accessibilityLabel("颜色 \(color)")
                                 }
-                                .buttonStyle(.plain)
-                                .accessibilityLabel("颜色 \(color)")
                             }
                         }
                     }
@@ -304,6 +376,9 @@ struct TargetEditor: View {
                         .disabled(validation != nil)
                         .accessibilityIdentifier("save-target")
                 }
+            }
+            .sheet(isPresented: $showIconPicker) {
+                IconPickerSheet(selection: $draft.symbol, tintHex: draft.tintHex)
             }
             .onChange(of: translatorDraft.credentialID) { _, id in
                 credentialPresent = id.map(SharedCredentialStore.contains) ?? false
@@ -370,34 +445,69 @@ struct TargetEditor: View {
     @ViewBuilder
     private var translatorSections: some View {
         Section {
-            Picker("引擎", selection: translationBinding(\.engine)) {
+            Picker("协议", selection: translationBinding(\.engine)) {
                 ForEach(TranslationEngineKind.allCases) { engine in Text(engine.title).tag(engine) }
             }
 
-            if translatorDraft.engine == .openAIChat {
+            HStack(spacing: 9) {
+                Image(systemName: translatorDraft.engine == .openAIChat ? "sparkles" : "network")
+                    .foregroundStyle(ResearchStyle.accent)
+                    .frame(width: 30, height: 30)
+                    .background(ResearchStyle.accent.opacity(0.10), in: RoundedRectangle(cornerRadius: 9))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(translatorDraft.engine == .openAIChat ? "AI 翻译" : "HTTP 翻译")
+                        .font(.subheadline.weight(.semibold))
+                    Text(translatorDraft.engine == .openAIChat
+                         ? "适合 OpenAI-compatible 模型，支持 SSE 流式输出"
+                         : "适合 Google GTX、DeepLX、DeepL、Microsoft 等 REST 接口")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+        } header: {
+            Text("引擎")
+        }
+
+        if translatorDraft.engine == .openAIChat {
+            Section {
                 TextField("Base URL，例如 https://api.openai.com", text: openAIBinding(\.baseURL))
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
                 TextField("Model", text: openAIBinding(\.model))
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
-                Text("System Prompt").font(.caption).foregroundStyle(.secondary)
-                CursorTemplateEditor(
-                    text: openAIBinding(\.systemPrompt),
-                    selection: $promptSelection,
-                    placeholder: "Translate from {from} to {to}…",
-                    identifier: "translator-system-prompt"
-                )
-                HStack {
-                    Button("{from}") { insert("{from}", into: openAIBinding(\.systemPrompt), selection: $promptSelection) }
-                    Button("{to}") { insert("{to}", into: openAIBinding(\.systemPrompt), selection: $promptSelection) }
-                    Button("{text}") { insert("{text}", into: openAIBinding(\.systemPrompt), selection: $promptSelection) }
+            } header: {
+                Text("连接")
+            }
+
+            Section {
+                DisclosureGroup("Prompt 与参数") {
+                    VStack(alignment: .leading, spacing: 8) {
+                        CursorTemplateEditor(
+                            text: openAIBinding(\.systemPrompt),
+                            selection: $promptSelection,
+                            placeholder: "Translate from {from} to {to}…",
+                            identifier: "translator-system-prompt"
+                        )
+                        HStack {
+                            Button("{from}") { insert("{from}", into: openAIBinding(\.systemPrompt), selection: $promptSelection) }
+                            Button("{to}") { insert("{to}", into: openAIBinding(\.systemPrompt), selection: $promptSelection) }
+                            Button("{text}") { insert("{text}", into: openAIBinding(\.systemPrompt), selection: $promptSelection) }
+                        }
+                        .font(.caption)
+
+                        HStack {
+                            Text("Temperature")
+                            Slider(value: openAITemperature, in: 0...2, step: 0.1)
+                            Text(openAITemperature.wrappedValue.formatted(.number.precision(.fractionLength(1))))
+                                .font(.caption.monospacedDigit()).frame(width: 30)
+                        }
+                    }
+                    .padding(.top, 8)
                 }
-                HStack {
-                    Text("Temperature")
-                    Slider(value: openAITemperature, in: 0...2, step: 0.1)
-                    Text(openAITemperature.wrappedValue.formatted(.number.precision(.fractionLength(1))))
-                        .font(.caption.monospacedDigit()).frame(width: 30)
-                }
-            } else {
+            } header: {
+                Text("高级")
+            }
+        } else {
+            Section {
                 Picker("Method", selection: httpBinding(\.method)) {
                     ForEach(["GET", "POST", "PUT", "PATCH", "DELETE"], id: \.self) { Text($0).tag($0) }
                 }
@@ -410,54 +520,72 @@ struct TargetEditor: View {
                     identifier: "translator-http-url"
                 )
                 tokenButtons(text: httpBinding(\.url), selection: $httpURLSelection, includeCredential: true)
+            } header: {
+                Text("连接")
+            }
 
-                Text("Headers JSON").font(.caption).foregroundStyle(.secondary)
-                CursorTemplateEditor(
-                    text: $httpHeadersText,
-                    selection: $httpHeadersSelection,
-                    placeholder: #"{"Authorization":"Bearer {credential}"}"#,
-                    identifier: "translator-http-headers"
-                )
-                tokenButtons(text: $httpHeadersText, selection: $httpHeadersSelection, includeCredential: true)
-
-                Picker("Body", selection: httpBinding(\.bodyEncoding)) {
-                    ForEach(HTTPBodyEncoding.allCases) { encoding in Text(encoding.rawValue.uppercased()).tag(encoding) }
-                }
-
-                if (translatorDraft.http ?? HTTPTranslationConfiguration()).bodyEncoding != .none {
-                    Text("Body 模板").font(.caption).foregroundStyle(.secondary)
-                    CursorTemplateEditor(
-                        text: httpBinding(\.bodyTemplate),
-                        selection: $bodySelection,
-                        placeholder: #"{"text":"{text}","source":"{from}","target":"{to}"}"#,
-                        identifier: "translator-http-body"
-                    )
-                    tokenButtons(text: httpBinding(\.bodyTemplate), selection: $bodySelection, includeCredential: true)
-                }
-
-                TextField("JSON Path；留空使用整个响应正文", text: httpBinding(\.responseJSONPath))
+            Section {
+                TextField("JSON Path；支持 [*]，留空则使用整个响应正文", text: httpBinding(\.responseJSONPath))
                     .font(.system(.subheadline, design: .monospaced))
                     .textInputAutocapitalization(.never).autocorrectionDisabled()
+
+                DisclosureGroup("Headers 与 Body") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Headers JSON").font(.caption).foregroundStyle(.secondary)
+                        CursorTemplateEditor(
+                            text: $httpHeadersText,
+                            selection: $httpHeadersSelection,
+                            placeholder: #"{"Authorization":"Bearer {credential}"}"#,
+                            identifier: "translator-http-headers"
+                        )
+                        tokenButtons(text: $httpHeadersText, selection: $httpHeadersSelection, includeCredential: true)
+
+                        Picker("Body", selection: httpBinding(\.bodyEncoding)) {
+                            ForEach(HTTPBodyEncoding.allCases) { encoding in Text(encoding.rawValue.uppercased()).tag(encoding) }
+                        }
+
+                        if (translatorDraft.http ?? HTTPTranslationConfiguration()).bodyEncoding != .none {
+                            Text("Body 模板").font(.caption).foregroundStyle(.secondary)
+                            CursorTemplateEditor(
+                                text: httpBinding(\.bodyTemplate),
+                                selection: $bodySelection,
+                                placeholder: #"{"text":"{text}","source":"{from}","target":"{to}"}"#,
+                                identifier: "translator-http-body"
+                            )
+                            tokenButtons(text: httpBinding(\.bodyTemplate), selection: $bodySelection, includeCredential: true)
+                        }
+                    }
+                    .padding(.top, 8)
+                }
+            } header: {
+                Text("响应与高级请求")
+            } footer: {
+                Text("占位符支持 {text}、{from}、{to}、{credential}；JSON Path 支持对象字段、数组索引和 [*] 通配数组。")
             }
-        } header: {
-            Text("翻译引擎")
-        } footer: {
-            Text("OpenAI 模式使用 /v1/chat/completions 与 SSE；通用 HTTP 支持 {text}、{from}、{to}、{credential}，JSON Body 会先解析模板再安全替换字符串值。")
         }
 
         Section {
+            HStack {
+                Label(
+                    translatorDraft.credentialID == nil ? "此引擎无需 API Key" : (credentialPresent ? "已保存 API Key" : "尚未保存 API Key"),
+                    systemImage: translatorDraft.credentialID == nil ? "lock.open" : (credentialPresent ? "checkmark.shield.fill" : "key")
+                )
+                .foregroundStyle(credentialPresent ? Color.green : Color.secondary)
+                Spacer()
+            }
+
             TextField("Credential ID", text: Binding(
                 get: { translatorDraft.credentialID ?? "" },
                 set: { translatorDraft.credentialID = $0.isEmpty ? nil : $0 }
             ))
             .textInputAutocapitalization(.never).autocorrectionDisabled()
 
-            SecureField(credentialPresent ? "API Key（留空保持已保存值）" : "API Key", text: $apiKey)
-                .textInputAutocapitalization(.never).autocorrectionDisabled()
+            if translatorDraft.credentialID != nil {
+                SecureField(credentialPresent ? "新 API Key（留空保持原值）" : "API Key", text: $apiKey)
+                    .textInputAutocapitalization(.never).autocorrectionDisabled()
+            }
 
             if credentialPresent {
-                Label("钥匙串中已有 Key；配置导出不会包含密钥", systemImage: "key.fill")
-                    .font(.caption).foregroundStyle(.secondary)
                 Button("删除已保存 Key", role: .destructive) {
                     guard let id = translatorDraft.credentialID else { return }
                     do {
@@ -468,19 +596,24 @@ struct TargetEditor: View {
                         saveError = error.localizedDescription
                     }
                 }
-            } else {
-                Text("Key 单独保存在共享钥匙串中；主 App 和分享扩展都可读取，导出 JSON 只保留 Credential ID。")
-                    .font(.caption).foregroundStyle(.secondary)
             }
         } header: {
-            Text("API Key")
+            Text("凭据")
+        } footer: {
+            Text("Key 只进共享钥匙串，导出的 JSON 只带 Credential ID；分享扩展可读取同一份 Key。")
         }
 
-        Section("使用方式") {
+        Section {
             Toggle("启用来源", isOn: $draft.enabled)
             Toggle("自动运行", isOn: translationBinding(\.autoRun))
-            Text("进入翻译结果页时，会自动运行你点中的引擎和所有开启「自动运行」的引擎；其他卡片可手动运行或点「全部翻译」。")
-                .font(.caption).foregroundStyle(.secondary)
+            Label(
+                translatorDraft.autoRun ? "进入翻译页会自动请求这个引擎" : "只在点这个来源或手动运行时请求",
+                systemImage: translatorDraft.autoRun ? "bolt.fill" : "hand.tap"
+            )
+            .font(.caption)
+            .foregroundStyle(.secondary)
+        } header: {
+            Text("运行")
         }
     }
 

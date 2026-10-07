@@ -96,6 +96,17 @@ final class AppStore: ObservableObject {
         do { try persist(next, history); configuration = next }
         catch { errorMessage = error.localizedDescription }
     }
+    func deleteHistory(id: String) {
+        let next = history.filter { $0.id != id }
+        guard next.count != history.count else { return }
+        do {
+            try persist(configuration, next)
+            history = next
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+    }
+
     func clearHistory() {
         do { try persist(configuration, []); history = [] }
         catch { errorMessage = error.localizedDescription }
