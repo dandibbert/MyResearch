@@ -48,7 +48,7 @@ final class AppStore: ObservableObject {
                             method: "POST",
                             url: "https://example.com/translate",
                             bodyEncoding: .json,
-                            bodyTemplate: #"{\"text\":\"{text}\"}"#,
+                            bodyTemplate: #"{"text":"{text}"}"#,
                             responseJSONPath: "$.translation"
                         ),
                         credentialID: nil,
