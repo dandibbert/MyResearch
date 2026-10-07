@@ -67,7 +67,6 @@ struct TranslationLauncherView: View {
                     providerHeader
                     sourcePreview
                     pairCard
-                    recommendationCard
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 8)
@@ -149,10 +148,18 @@ struct TranslationLauncherView: View {
     }
 
     private var pairCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text("语对")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Text("语对")
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                if detectedLanguage != nil {
+                    Text("按识别语言推荐")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+            }
 
             HStack(spacing: 10) {
                 languageMenu(
@@ -184,54 +191,51 @@ struct TranslationLauncherView: View {
                     targetLanguage = value
                 }
             }
-        }
-        .padding(14)
-        .background(ResearchStyle.surface, in: RoundedRectangle(cornerRadius: 18))
-    }
 
-    private var recommendationCard: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(detectedLanguage == nil ? "建议语对" : "\(TranslationLanguageRouter.displayName(recommendationSource)) 常用方向")
-                        .font(.caption.weight(.semibold))
-                    Text("只推荐当前源语言的目标方向")
+            VStack(alignment: .leading, spacing: 7) {
+                HStack(spacing: 5) {
+                    Image(systemName: "sparkles")
                         .font(.caption2)
+                        .foregroundStyle(ResearchStyle.accent)
+                    Text("\(TranslationLanguageRouter.displayName(recommendationSource)) 常用方向")
+                        .font(.caption.weight(.medium))
                         .foregroundStyle(.secondary)
-                }
-                Spacer()
-                if settings.lastTranslationSourceLanguage == recommendationSource,
-                   let last = settings.lastTranslationTargetLanguage {
-                    Text("上次 → \(TranslationLanguageRouter.shortName(last))")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            }
-
-            HStack(spacing: 8) {
-                ForEach(recommendations) { pair in
-                    let selected = sourceLanguage == pair.source && targetLanguage == pair.target
-                    Button {
-                        sourceLanguage = pair.source
-                        targetLanguage = pair.target
-                    } label: {
-                        Text(pair.compactTitle)
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(selected ? ResearchStyle.accent : .primary)
-                            .frame(maxWidth: .infinity, minHeight: 40)
-                            .background(
-                                selected ? ResearchStyle.accent.opacity(0.11) : ResearchStyle.elevated,
-                                in: RoundedRectangle(cornerRadius: 12)
-                            )
-                            .overlay {
-                                RoundedRectangle(cornerRadius: 12)
-                                    .strokeBorder(selected ? ResearchStyle.accent.opacity(0.45) : Color.clear, lineWidth: 1)
-                            }
+                    Spacer()
+                    if settings.lastTranslationSourceLanguage == recommendationSource,
+                       let last = settings.lastTranslationTargetLanguage {
+                        Text("上次 → \(TranslationLanguageRouter.shortName(last))")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityIdentifier("translation-pair-\(pair.source)-\(pair.target)")
+                }
+
+                HStack(spacing: 8) {
+                    ForEach(recommendations) { pair in
+                        let effectiveSource = sourceLanguage == "auto" ? recommendationSource : sourceLanguage
+                        let selected = effectiveSource == pair.source && targetLanguage == pair.target
+                        Button {
+                            sourceLanguage = pair.source
+                            targetLanguage = pair.target
+                        } label: {
+                            Text(pair.compactTitle)
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(selected ? ResearchStyle.accent : .primary)
+                                .frame(maxWidth: .infinity, minHeight: 38)
+                                .background(
+                                    selected ? ResearchStyle.accent.opacity(0.11) : ResearchStyle.elevated,
+                                    in: RoundedRectangle(cornerRadius: 11)
+                                )
+                                .overlay {
+                                    RoundedRectangle(cornerRadius: 11)
+                                        .strokeBorder(selected ? ResearchStyle.accent.opacity(0.42) : Color.clear, lineWidth: 1)
+                                }
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityIdentifier("translation-pair-\(pair.source)-\(pair.target)")
+                    }
                 }
             }
+            .padding(.top, 2)
         }
         .padding(14)
         .background(ResearchStyle.surface, in: RoundedRectangle(cornerRadius: 18))
