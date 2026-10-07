@@ -42,16 +42,13 @@ final class AppStore: ObservableObject {
                     quickAccess: true,
                     kind: .translator,
                     translator: TranslationConfiguration(
-                        engine: .http,
-                        openAI: nil,
-                        http: HTTPTranslationConfiguration(
-                            method: "POST",
-                            url: "https://example.com/translate",
-                            bodyEncoding: .json,
-                            bodyTemplate: #"{"text":"{text}"}"#,
-                            responseJSONPath: "$.translation"
+                        engine: .openAIChat,
+                        openAI: OpenAIChatConfiguration(
+                            baseURL: "https://example.com",
+                            model: ""
                         ),
-                        credentialID: nil,
+                        http: nil,
+                        credentialID: "translator.fixture",
                         autoRun: false
                     )
                 ))
