@@ -30,6 +30,34 @@ final class AppStore: ObservableObject {
                 configuration.settings.defaultTargetID = "google"
                 configuration.settings.provider = .off
             }
+            if ProcessInfo.processInfo.arguments.contains("--translation-fixture") {
+                configuration.targets.append(SearchTarget(
+                    id: "translator-fixture",
+                    name: "测试翻译",
+                    symbol: "ph:translate",
+                    tintHex: "5265DE",
+                    template: "",
+                    aliases: ["tr"],
+                    enabled: true,
+                    quickAccess: true,
+                    kind: .translator,
+                    translator: TranslationConfiguration(
+                        engine: .http,
+                        openAI: nil,
+                        http: HTTPTranslationConfiguration(
+                            method: "POST",
+                            url: "https://example.com/translate",
+                            bodyEncoding: .json,
+                            bodyTemplate: #"{\"text\":\"{text}\"}"#,
+                            responseJSONPath: "$.translation"
+                        ),
+                        credentialID: nil,
+                        autoRun: false
+                    )
+                ))
+                configuration.settings.provider = .off
+                configuration.settings.translationPairPromptEnabled = true
+            }
             if let argument = ProcessInfo.processInfo.arguments.first(where: { $0.hasPrefix("--query=") }) {
                 query = String(argument.dropFirst(8))
             }
