@@ -8,9 +8,9 @@ final class MyResearchUITests: XCTestCase {
     override func tearDownWithError() throws {
         XCUIDevice.shared.orientation = .portrait
     }
-    private func launch(_ query: String = "") -> XCUIApplication {
+    private func launch(_ query: String = "", extraArguments: [String] = []) -> XCUIApplication {
         let app = XCUIApplication()
-        app.launchArguments = ["--ui-testing", "--query=\(query)", "-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
+        app.launchArguments = ["--ui-testing", "--query=\(query)"] + extraArguments + ["-AppleLanguages", "(zh-Hans)", "-AppleLocale", "zh_CN"]
         app.launch()
         XCUIDevice.shared.orientation = .portrait
         XCTAssertTrue(app.textFields["search-input"].waitForExistence(timeout: 8))
@@ -88,12 +88,38 @@ final class MyResearchUITests: XCTestCase {
         XCTAssertTrue(opened.label.contains("youtube.com/results"))
         shot("04-scrollable-quick-sources")
     }
+    func testTranslatorTriggerOpensSmartPairLauncher() {
+        let app = launch("tr こんにちは", extraArguments: ["--translation-fixture"])
+        app.buttons["submit-search"].tap()
+
+        XCTAssertTrue(app.navigationBars["翻译设置"].waitForExistence(timeout: 5))
+        XCTAssertTrue(app.buttons["translation-pair-ja-zh"].waitForExistence(timeout: 3))
+        XCTAssertTrue(app.buttons["translation-pair-ja-en"].exists)
+        XCTAssertFalse(app.buttons["translation-pair-zh-ja"].exists)
+        XCTAssertTrue(app.buttons["translation-launch-confirm"].isHittable)
+        shot("05-translation-pair-launcher")
+    }
+
+    func testTranslatorEditorKeepsAdvancedOptionsCollapsed() {
+        let app = launch(extraArguments: ["--translation-fixture"])
+        app.buttons["toggle-keyboard"].tap()
+        XCTAssertTrue(app.buttons["tab-1"].waitForExistence(timeout: 4))
+        app.buttons["tab-1"].tap()
+        XCTAssertTrue(app.buttons["edit-translator-fixture"].waitForExistence(timeout: 4))
+        app.buttons["edit-translator-fixture"].tap()
+
+        XCTAssertTrue(app.navigationBars["编辑翻译引擎"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.buttons["获取模型列表"].exists)
+        XCTAssertFalse(app.staticTexts["System Prompt"].exists)
+        shot("06-translator-editor")
+    }
+
     func testLandscapeKeepsInputReachable() {
         let app = launch("a long search query")
         XCUIDevice.shared.orientation = .landscapeLeft
         XCTAssertTrue(app.buttons["original-query"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["original-query"].isHittable)
         XCTAssertTrue(app.textFields["search-input"].isHittable)
-        shot("05-landscape-search")
+        shot("07-landscape-search")
     }
 }

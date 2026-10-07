@@ -62,6 +62,10 @@ final class CoreTests: XCTestCase {
         var original = Configuration.initial
         original.targets.reverse()
         original.settings.provider = .off
+        original.settings.translationPairPromptEnabled = false
+        original.settings.translationPreferredTargetLanguage = "ja"
+        original.settings.lastTranslationSourceLanguage = "zh"
+        original.settings.lastTranslationTargetLanguage = "ja"
         XCTAssertEqual(try ConfigurationCodec.decode(ConfigurationCodec.encode(original)), original)
     }
     func testDuplicateIDsAndAliasesRejected() {
@@ -122,6 +126,8 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(config.schemaVersion, 2)
         XCTAssertEqual(config.targets[0].kind, .link)
         XCTAssertTrue(config.settings.usesInAppSafari)
+        XCTAssertTrue(config.settings.usesTranslationPairPrompt)
+        XCTAssertNil(config.settings.translationPreferredTargetLanguage)
         XCTAssertFalse(config.targets[0].usesInAppSafari)
         XCTAssertEqual(config.quickTargets.map(\.id), ["google"])
     }

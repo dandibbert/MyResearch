@@ -5,6 +5,20 @@ struct TranslationDestination: Identifiable, Equatable {
     let id = UUID()
     var text: String
     var preferredTargetID: String?
+    var sourceLanguage: String?
+    var targetLanguage: String?
+
+    init(
+        text: String,
+        preferredTargetID: String?,
+        sourceLanguage: String? = nil,
+        targetLanguage: String? = nil
+    ) {
+        self.text = text
+        self.preferredTargetID = preferredTargetID
+        self.sourceLanguage = sourceLanguage
+        self.targetLanguage = targetLanguage
+    }
 }
 
 private enum TranslationCardPhase: Equatable {
@@ -55,8 +69,8 @@ private final class TranslationResultsModel: ObservableObject {
         preferredTargetID = destination.preferredTargetID
         self.sources = sources.filter { $0.kind == .translator && $0.enabled && $0.translator != nil }
         let route = TranslationLanguageRouter.route(destination.text)
-        sourceLanguage = route.source
-        targetLanguage = route.target
+        sourceLanguage = destination.sourceLanguage ?? route.source
+        targetLanguage = destination.targetLanguage ?? route.target
         states = Dictionary(uniqueKeysWithValues: self.sources.map { ($0.id, TranslationCardState()) })
     }
 
@@ -193,8 +207,8 @@ struct TranslationResultsScreen: View {
         _model = StateObject(wrappedValue: TranslationResultsModel(destination: destination, sources: sources))
     }
 
-    private let sourceLanguages = ["auto", "zh", "en", "ja", "ko", "fr", "de", "es"]
-    private let targetLanguages = ["zh", "en", "ja", "ko", "fr", "de", "es"]
+    private let sourceLanguages = TranslationLanguageRouter.sourceLanguages
+    private let targetLanguages = TranslationLanguageRouter.targetLanguages
 
     var body: some View {
         NavigationStack {

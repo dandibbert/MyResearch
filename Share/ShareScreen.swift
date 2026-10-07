@@ -89,6 +89,19 @@ struct ShareScreen: View {
                     return await open(url, model.compatibility)
                 })
             }
+            .sheet(item: $model.translationLaunchRequest) { request in
+                if let provider = model.configuration.enabledTranslators.first(where: { $0.id == request.preferredTargetID }) {
+                    TranslationLauncherView(
+                        request: request,
+                        provider: provider,
+                        settings: model.configuration.settings,
+                        onCancel: { model.cancelTranslationLaunch() },
+                        onConfirm: { source, target in
+                            model.confirmTranslationLaunch(sourceLanguage: source, targetLanguage: target)
+                        }
+                    )
+                }
+            }
             .sheet(item: $model.translationDestination) { destination in
                 TranslationResultsScreen(destination: destination, sources: model.configuration.enabledTranslators)
             }
