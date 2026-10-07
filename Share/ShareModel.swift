@@ -17,6 +17,7 @@ final class ShareModel: ObservableObject {
     @Published var loading = true
     @Published var opening = false
     @Published var browser: BrowserDestination?
+    @Published var translationLaunchRequest: TranslationLaunchRequest?
     @Published var translationDestination: TranslationDestination?
     @Published var failedURL: URL?
     @Published var failedWebURL: URL?
@@ -67,7 +68,7 @@ final class ShareModel: ObservableObject {
         if target.kind == .translator {
             let value = text.trimmingCharacters(in: .whitespacesAndNewlines)
             guard !value.isEmpty else { error = "先输入要翻译的内容。"; return }
-            translationDestination = TranslationDestination(text: value, preferredTargetID: target.id)
+            beginTranslation(value, target: target)
             return
         }
         do {
@@ -93,6 +94,64 @@ final class ShareModel: ObservableObject {
             }
         } catch { self.error = error.localizedDescription }
     }
+    private func beginTranslation(_ text: String, target: SearchTarget) {
+        let settings = configuration.settings
+        if settings.usesTranslationPairPrompt {
+            translationLaunchRequest = TranslationLaunchRequest(
+                text: text,
+                preferredTargetID: target.id,
+                recordHistory: false
+            )
+            return
+        }
+        let route = TranslationLanguageRouter.route(
+            text,
+            preferredTarget: settings.translationPreferredTargetLanguage,
+            lastSource: settings.lastTranslationSourceLanguage,
+            lastTarget: settings.lastTranslationTargetLanguage
+        )
+        launchTranslation(
+            text: text,
+            targetID: target.id,
+            sourceLanguage: route.source,
+            targetLanguage: route.target
+        )
+    }
+
+    func confirmTranslationLaunch(sourceLanguage: String, targetLanguage: String) {
+        guard let request = translationLaunchRequest else { return }
+        configuration.settings.lastTranslationSourceLanguage = sourceLanguage
+        configuration.settings.lastTranslationTargetLanguage = targetLanguage
+        launchTranslation(
+            text: request.text,
+            targetID: request.preferredTargetID,
+            sourceLanguage: sourceLanguage,
+            targetLanguage: targetLanguage
+        )
+    }
+
+    func cancelTranslationLaunch() {
+        translationLaunchRequest = nil
+    }
+
+    private func launchTranslation(
+        text: String,
+        targetID: String,
+        sourceLanguage: String,
+        targetLanguage: String
+    ) {
+        translationLaunchRequest = nil
+        let destination = TranslationDestination(
+            text: text,
+            preferredTargetID: targetID,
+            sourceLanguage: sourceLanguage,
+            targetLanguage: targetLanguage
+        )
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12) { [weak self] in
+            self?.translationDestination = destination
+        }
+    }
+
     func continueInApp() {
         guard !opening else { return }
         do {
