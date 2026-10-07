@@ -104,7 +104,15 @@ struct AppSettings: Codable, Equatable, Sendable {
     var maxSuggestions = 6
     var defaultTargetID = "google"
     var inAppSafariEnabled: Bool? = true
+
+    // Optional for backward-compatible decoding of existing schema v2 files.
+    var translationPairPromptEnabled: Bool?
+    var translationPreferredTargetLanguage: String?
+    var lastTranslationSourceLanguage: String?
+    var lastTranslationTargetLanguage: String?
+
     var usesInAppSafari: Bool { inAppSafariEnabled ?? true }
+    var usesTranslationPairPrompt: Bool { translationPairPromptEnabled ?? true }
 }
 
 struct HistoryItem: Identifiable, Codable, Equatable, Sendable {
