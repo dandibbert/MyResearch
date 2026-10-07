@@ -45,6 +45,19 @@ struct RootView: View {
         }
         .background(ResearchStyle.background)
         .sheet(isPresented: $testSharing) { SystemShareSheet(text: store.query, includeURL: true) }
+        .sheet(item: $store.translationLaunchRequest) { request in
+            if let provider = store.configuration.enabledTranslators.first(where: { $0.id == request.preferredTargetID }) {
+                TranslationLauncherView(
+                    request: request,
+                    provider: provider,
+                    settings: store.configuration.settings,
+                    onCancel: { store.cancelTranslationLaunch() },
+                    onConfirm: { source, target in
+                        store.confirmTranslationLaunch(sourceLanguage: source, targetLanguage: target)
+                    }
+                )
+            }
+        }
         .sheet(item: $store.translationDestination) { destination in
             TranslationResultsScreen(destination: destination, sources: store.configuration.enabledTranslators)
         }
