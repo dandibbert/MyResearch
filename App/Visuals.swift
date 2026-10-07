@@ -1,10 +1,12 @@
 import SwiftUI
 import UIKit
+import PhosphorSwift
 
 enum ResearchStyle {
     static let accent = Color(hex: "5265DE")
     static let background = Color(uiColor: .systemGroupedBackground)
     static let surface = Color(uiColor: .secondarySystemGroupedBackground)
+    static let elevated = Color(uiColor: .tertiarySystemGroupedBackground)
 }
 
 extension Color {
@@ -15,13 +17,33 @@ extension Color {
     }
 }
 
+struct IconGlyph: View {
+    var storedValue: String
+    var tintHex: String
+    var size: CGFloat
+
+    var body: some View {
+        Group {
+            if storedValue.hasPrefix("ph:"),
+               let icon = Ph(rawValue: String(storedValue.dropFirst(3))) {
+                icon.bold
+                    .color(Color(hex: tintHex))
+                    .aspectRatio(contentMode: .fit)
+            } else {
+                Image(systemName: UIImage(systemName: storedValue) == nil ? "magnifyingglass" : storedValue)
+                    .font(.system(size: size * 0.72, weight: .semibold))
+                    .foregroundStyle(Color(hex: tintHex))
+            }
+        }
+        .frame(width: size, height: size)
+    }
+}
+
 struct TargetIcon: View {
     var target: SearchTarget
     var size: CGFloat = 34
     var body: some View {
-        Image(systemName: UIImage(systemName: target.symbol) == nil ? "magnifyingglass" : target.symbol)
-            .font(.system(size: size * 0.48, weight: .semibold))
-            .foregroundStyle(Color(hex: target.tintHex))
+        IconGlyph(storedValue: target.symbol, tintHex: target.tintHex, size: size * 0.62)
             .frame(width: size, height: size)
             .background(Color(hex: target.tintHex).opacity(0.12), in: RoundedRectangle(cornerRadius: size * 0.28))
             .accessibilityHidden(true)
@@ -44,7 +66,7 @@ struct SourceRow: View {
                     .padding(.horizontal, 7).padding(.vertical, 4)
                     .foregroundStyle(.secondary).background(.quaternary, in: Capsule())
             }
-            Image(systemName: "arrow.up.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
+            Image(systemName: "chevron.right").font(.caption.weight(.semibold)).foregroundStyle(.tertiary)
         }
         .frame(minHeight: 48).contentShape(Rectangle())
     }

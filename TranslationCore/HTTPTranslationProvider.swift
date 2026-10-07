@@ -19,10 +19,13 @@ public struct HTTPTranslationProvider: TranslationProvider, @unchecked Sendable 
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
+                    let map = configuration.languageMap ?? [:]
+                    let rawFrom = request.sourceLanguage ?? "auto"
+                    let rawTo = request.targetLanguage
                     let values = TranslationTemplateValues(
                         text: request.text,
-                        from: request.sourceLanguage ?? "auto",
-                        to: request.targetLanguage,
+                        from: map[rawFrom] ?? rawFrom,
+                        to: map[rawTo] ?? rawTo,
                         credential: credential
                     )
                     let urlString = try TranslationTemplateRenderer.renderURL(configuration.url, values: values)

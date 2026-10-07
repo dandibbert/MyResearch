@@ -4,7 +4,18 @@
 
 [产品设计文档](docs/PRODUCT_DESIGN.md) · [安装与构建](docs/INSTALL.md) · [分享扩展](docs/SHARE_EXTENSION.md) · [GitHub Actions](../../actions/workflows/ios.yml)
 
-当前版本：1.3.0
+当前版本：1.3.1
+
+## 1.3.1
+
+翻译与来源编辑体验重做：
+
+- 翻译结果页改成语言方向卡 + 原文卡 + 多引擎结果卡，状态、复制、重试和 Auto Run 更清楚。
+- 图标选择器接入 Phosphor Swift，保留 SF Symbols 兼容；常用图标按中文分类展示，并可搜索 Phosphor 全量图标。
+- 新增翻译预设：Google GTX（免 Key / 非官方）、DeepLX、DeepL API、Microsoft Translator F0，以及 Kagi Translate 网页预填。
+- HTTP JSON Path 新增 [*] 数组通配，支持 Google 多段译文合并；HTTP 引擎可为不同服务配置语言码映射。
+- 翻译配置页重新分层为引擎、连接、响应/高级请求、凭据和运行，减少工程配置项挤在同一屏的问题。
+
 
 
 ## 1.3
