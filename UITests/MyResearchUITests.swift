@@ -100,12 +100,27 @@ final class MyResearchUITests: XCTestCase {
         shot("05-translation-pair-launcher")
     }
 
+    func testTranslatorEditorKeepsAdvancedOptionsCollapsed() {
+        let app = launch(extraArguments: ["--translation-fixture"])
+        app.buttons["toggle-keyboard"].tap()
+        XCTAssertTrue(app.buttons["tab-1"].waitForExistence(timeout: 4))
+        app.buttons["tab-1"].tap()
+        XCTAssertTrue(app.buttons["edit-translator-fixture"].waitForExistence(timeout: 4))
+        app.buttons["edit-translator-fixture"].tap()
+
+        XCTAssertTrue(app.navigationBars["编辑翻译引擎"].waitForExistence(timeout: 4))
+        XCTAssertTrue(app.buttons["获取模型列表"].exists)
+        XCTAssertTrue(app.buttons["高级设置"].exists)
+        XCTAssertFalse(app.staticTexts["System Prompt"].exists)
+        shot("06-translator-editor")
+    }
+
     func testLandscapeKeepsInputReachable() {
         let app = launch("a long search query")
         XCUIDevice.shared.orientation = .landscapeLeft
         XCTAssertTrue(app.buttons["original-query"].waitForExistence(timeout: 5))
         XCTAssertTrue(app.buttons["original-query"].isHittable)
         XCTAssertTrue(app.textFields["search-input"].isHittable)
-        shot("06-landscape-search")
+        shot("07-landscape-search")
     }
 }
