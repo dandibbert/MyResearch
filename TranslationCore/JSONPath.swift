@@ -82,7 +82,7 @@ public enum TranslationJSONPath {
                     .trimmingCharacters(in: .whitespacesAndNewlines)
                 if token == "*" {
                     result.append(.wildcard)
-                } else if (token.hasPrefix(""") && token.hasSuffix(""")) || (token.hasPrefix("'") && token.hasSuffix("'")) {
+                } else if (token.hasPrefix("\\"") && token.hasSuffix("\\"")) || (token.hasPrefix("'") && token.hasSuffix("'")) {
                     token.removeFirst()
                     token.removeLast()
                     guard !token.isEmpty else {
