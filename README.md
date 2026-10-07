@@ -15,6 +15,7 @@
 - 新增翻译预设：Google GTX（免 Key / 非官方）、DeepLX、DeepL API、Microsoft Translator F0，以及 Kagi Translate 网页预填。
 - HTTP JSON Path 新增 [*] 数组通配，支持 Google 多段译文合并；HTTP 引擎可为不同服务配置语言码映射。
 - 翻译配置页重新分层为引擎、连接、响应/高级请求、凭据和运行，减少工程配置项挤在同一屏的问题。
+- 最近搜索支持左滑单条删除，设置页仍保留一键清空全部历史。
 
 
 
