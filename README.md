@@ -4,7 +4,19 @@
 
 [产品设计文档](docs/PRODUCT_DESIGN.md) · [安装与构建](docs/INSTALL.md) · [分享扩展](docs/SHARE_EXTENSION.md) · [GitHub Actions](../../actions/workflows/ios.yml)
 
-当前版本：1.3.1
+当前版本：1.3.2
+
+## 1.3.2
+
+翻译工作流与翻译源编辑重做：
+
+- 所有翻译入口统一经过 Translation Launcher：来源列表、联想快捷按钮、原词快捷按钮、Trigger 与分享扩展行为一致。
+- Launcher 会先识别源语言，再只推荐从当前源语言出发的目标方向；例如识别为日语时推荐日→中、日→英、日→韩。
+- 设置新增「翻译前确认语对」开关与常用目标语言。关闭确认后按识别结果、常用目标语言和上次语对直接翻译。
+- 翻译结果页接收已确认语对，不再先请求后补选。
+- OpenAI-compatible 翻译源支持通过 /v1/models 拉取模型，并在可搜索列表中选择；接口不支持时仍可高级手填。
+- 翻译源编辑页重新分层：连接、模型、运行是常用设置；Credential ID、Extra Headers、Prompt、Temperature、HTTP Body 与 JSON Path 默认收进高级设置。
+
 
 ## 1.3.1
 
