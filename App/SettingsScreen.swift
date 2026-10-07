@@ -44,6 +44,30 @@ struct SettingsScreen: View {
                 } header: { Text("搜索体验") }
                   footer: { Text("跟手布局把输入框和固定原词行放在键盘上方。App 内 Safari 总开关只影响在「我的链接」中单独开启该选项的网页来源；来源顺序仍由「我的链接」手动调整。") }
                 Section {
+                    Toggle("翻译前确认语对", isOn: Binding(
+                        get: { store.configuration.settings.usesTranslationPairPrompt },
+                        set: { value in store.updateSettings { $0.translationPairPromptEnabled = value } }
+                    ))
+                    Picker("常用目标语言", selection: Binding(
+                        get: { store.configuration.settings.translationPreferredTargetLanguage ?? "smart" },
+                        set: { value in
+                            store.updateSettings {
+                                $0.translationPreferredTargetLanguage = value == "smart" ? nil : value
+                            }
+                        }
+                    )) {
+                        Text("智能推荐").tag("smart")
+                        Text("中文").tag("zh")
+                        Text("日本語").tag("ja")
+                        Text("English").tag("en")
+                        Text("한국어").tag("ko")
+                    }
+                } header: { Text("翻译") }
+                  footer: {
+                      Text("开启时，点任意翻译来源或快捷按钮都会先确认语对；关闭后会按识别结果、常用目标语言和上次选择直接翻译。识别到明确源语言时，语对推荐只显示从该语言出发的方向。")
+                  }
+
+                Section {
                     Picker("联想来源", selection: setting(\.provider)) {
                         ForEach(SuggestionProvider.allCases) { provider in Text(provider.title).tag(provider) }
                     }
@@ -73,7 +97,7 @@ struct SettingsScreen: View {
                         .font(.caption).foregroundStyle(.secondary).textSelection(.enabled)
                 }
                 Section {
-                    LabeledContent("MyResearch", value: "1.3.1")
+                    LabeledContent("MyResearch", value: "1.3.2")
                     Text("打开就输入。原词始终在手边。")
                         .font(.footnote).foregroundStyle(.secondary)
                 }
