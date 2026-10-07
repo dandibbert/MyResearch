@@ -181,8 +181,13 @@ struct TargetEditor: View {
 
     @State private var translatorDraft: TranslationConfiguration
     @State private var httpHeadersText: String
+    @State private var openAIHeadersText: String
     @State private var apiKey = ""
     @State private var credentialPresent: Bool
+    @State private var modelCatalog: [String] = []
+    @State private var modelLoading = false
+    @State private var modelFetchError: String?
+    @State private var showModelPicker = false
 
     @State private var templateSelection: NSRange
     @State private var httpURLSelection: NSRange
@@ -201,6 +206,7 @@ struct TargetEditor: View {
         _aliasText = State(initialValue: target.aliases.joined(separator: ", "))
         _translatorDraft = State(initialValue: translator)
         _httpHeadersText = State(initialValue: Self.encodeHeaders(http.headers))
+        _openAIHeadersText = State(initialValue: Self.encodeHeaders(translator.openAI?.extraHeaders ?? [:]))
         _credentialPresent = State(initialValue: translator.credentialID.map(SharedCredentialStore.contains) ?? false)
 
         _templateSelection = State(initialValue: NSRange(location: (target.template as NSString).length, length: 0))
@@ -229,6 +235,7 @@ struct TargetEditor: View {
                 var config = translation.openAI ?? OpenAIChatConfiguration()
                 config.baseURL = config.baseURL.trimmingCharacters(in: .whitespacesAndNewlines)
                 config.model = config.model.trimmingCharacters(in: .whitespacesAndNewlines)
+                if let headers = Self.decodeHeaders(openAIHeadersText) { config.extraHeaders = headers }
                 translation.openAI = config
             } else {
                 var config = translation.http ?? HTTPTranslationConfiguration()
@@ -247,6 +254,11 @@ struct TargetEditor: View {
     }
 
     private var validation: String? {
+        if draft.kind == .translator,
+           translatorDraft.engine == .openAIChat,
+           Self.decodeHeaders(openAIHeadersText) == nil {
+            return "OpenAI Extra Headers 必须是 JSON object，且所有值都必须是字符串。"
+        }
         if draft.kind == .translator,
            translatorDraft.engine == .http,
            Self.decodeHeaders(httpHeadersText) == nil {
@@ -379,6 +391,9 @@ struct TargetEditor: View {
             }
             .sheet(isPresented: $showIconPicker) {
                 IconPickerSheet(selection: $draft.symbol, tintHex: draft.tintHex)
+            }
+            .sheet(isPresented: $showModelPicker) {
+                ModelPickerSheet(models: modelCatalog, selection: openAIBinding(\.model))
             }
             .onChange(of: translatorDraft.credentialID) { _, id in
                 credentialPresent = id.map(SharedCredentialStore.contains) ?? false
