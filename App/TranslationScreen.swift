@@ -207,8 +207,8 @@ struct TranslationResultsScreen: View {
         _model = StateObject(wrappedValue: TranslationResultsModel(destination: destination, sources: sources))
     }
 
-    private let sourceLanguages = ["auto", "zh", "en", "ja", "ko", "fr", "de", "es"]
-    private let targetLanguages = ["zh", "en", "ja", "ko", "fr", "de", "es"]
+    private let sourceLanguages = TranslationLanguageRouter.sourceLanguages
+    private let targetLanguages = TranslationLanguageRouter.targetLanguages
 
     var body: some View {
         NavigationStack {
