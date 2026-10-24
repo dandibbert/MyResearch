@@ -278,10 +278,27 @@ final class AppStore: ObservableObject {
     func refreshSharing() { if !storageBlocked { publishSharing(configuration) } }
     func receive(_ url: URL) {
         guard let handoff = ShareHandoff.parse(url) else { return }
+        let wasPresenting = dismissPresentedPages()
         query = handoff.query
         selectedTab = 0
         guard handoff.run else { return }
-        let intent = SearchRouter.intent(for: query, configuration: configuration)
+        // 等上一个 Safari / 翻译页的退出动画结束再打开新页面，否则 SwiftUI 会丢掉这次展示。
+        if wasPresenting {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) { [weak self] in self?.run(handoff) }
+        } else {
+            run(handoff)
+        }
+    }
+    /// 外部再次跳转进来时，关闭仍停留在上一个关键词上的 App 内 Safari 与翻译页面。
+    private func dismissPresentedPages() -> Bool {
+        let presenting = safariURL != nil || translationLaunchRequest != nil || translationDestination != nil
+        safariURL = nil
+        translationLaunchRequest = nil
+        translationDestination = nil
+        return presenting
+    }
+    private func run(_ handoff: ShareHandoff) {
+        let intent = SearchRouter.intent(for: handoff.query, configuration: configuration)
         if let id = handoff.targetID {
             guard let target = configuration.enabledTargets.first(where: { $0.id == id }) else {
                 errorMessage = "分享指定的来源已删除或停用，请重新选择。"
